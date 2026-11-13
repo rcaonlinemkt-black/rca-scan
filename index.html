@@ -1,0 +1,1392 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@400;500;600;700&display=swap">
+<script src="https://unpkg.com/@zxing/library@0.21.3/umd/index.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jsbarcode/3.11.6/JsBarcode.all.min.js"></script>
+<style>
+  :root {
+    --navy: #0b1f4d; --navy-2: #16306b; --yellow: #ffd400; --ink: #14203a; --muted: #5b6680;
+    --line: #dde2ec; --bg: #f3f5f9; --card: #ffffff; --ok: #0f8a4b; --ok-bg: #e6f6ee; --bad: #c62828; --bad-bg: #fdecec; --warn: #a15c00; --warn-bg: #fff4dd;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: var(--bg); color: var(--ink); font-family: 'Noto Sans Thai', system-ui, sans-serif; font-size: 16px; -webkit-tap-highlight-color: transparent; }
+  button, input, select { font: inherit; }
+  .top { background: var(--navy); color: #fff; padding: 12px 16px; display: flex; align-items: center; gap: 12px; position: sticky; top: 0; z-index: 5; }
+  .top b { font-size: 17px; font-weight: 600; }
+  .top .who { margin-left: auto; text-align: right; font-size: 13px; line-height: 1.35; background: none; border: 0; color: #fff; padding: 0; }
+  .top .who span { color: var(--yellow); display: block; }
+  .logo { width: 34px; height: 34px; border-radius: 50%; background: var(--yellow); color: var(--navy); display: grid; place-items: center; font-weight: 700; font-size: 12px; flex: none; }
+  main { padding: 14px 16px 40px; display: grid; gap: 14px; max-width: 560px; margin: 0 auto; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 14px; display: grid; gap: 10px; }
+  .card h2 { margin: 0; font-size: 15px; font-weight: 600; color: var(--muted); }
+  label { font-size: 14px; color: var(--muted); display: grid; gap: 6px; }
+  input, select { border: 1px solid var(--line); border-radius: 10px; padding: 12px; background: #fff; color: var(--ink); width: 100%; }
+  input:focus, select:focus, button:focus-visible { outline: 3px solid rgba(255, 212, 0, .7); outline-offset: 1px; }
+  .btn { border: 0; border-radius: 12px; padding: 13px 16px; font-weight: 600; background: #e9edf5; color: var(--ink); cursor: pointer; }
+  .btn.primary { background: var(--yellow); color: var(--navy); }
+  .btn.navy { background: var(--navy); color: #fff; }
+  .btn.ghost { background: transparent; border: 1px solid var(--line); }
+  .btn.small { padding: 8px 12px; font-size: 14px; border-radius: 10px; }
+  .btn:disabled { opacity: .5; }
+  .row { display: flex; gap: 10px; align-items: center; }
+  .row > * { flex: 1; }
+  .now { background: var(--navy); color: #fff; border-radius: 14px; padding: 12px 14px; display: flex; align-items: center; gap: 10px; }
+  .now .big { font-size: 22px; font-weight: 700; color: var(--yellow); line-height: 1.2; }
+  .now .small { font-size: 13px; opacity: .85; }
+  .now button { margin-left: auto; flex: none; }
+  .sets { display: grid; gap: 8px; max-height: 55vh; overflow-y: auto; }
+  .sets h4 { margin: 6px 0 0; font-size: 13px; color: var(--muted); font-weight: 600; }
+  .set { display: grid; grid-template-columns: 1fr auto auto; gap: 8px; align-items: center; border: 1px solid var(--line); border-radius: 12px; padding: 8px 10px; }
+  .set b { font-size: 18px; }
+  .set small { display: block; color: var(--muted); font-size: 12px; }
+  .chip { border: 1px solid var(--line); background: #fff; border-radius: 999px; padding: 9px 14px; font-weight: 600; cursor: pointer; color: var(--ink); }
+  .chip.on { background: var(--navy); border-color: var(--navy); color: #fff; }
+  #reader { position: relative; width: 100%; border-radius: 12px; overflow: hidden; background: #0b1f4d; }
+  #reader video { display: block; width: 100%; max-height: 62vh; object-fit: cover; }
+  #reader .guide { position: absolute; left: 6%; right: 6%; top: 50%; height: 26%; transform: translateY(-50%); border: 3px solid var(--yellow); border-radius: 10px; box-shadow: 0 0 0 999px rgba(11, 31, 77, .35); pointer-events: none; }
+  #reader .guide span { position: absolute; left: 0; right: 0; bottom: -30px; text-align: center; color: #fff; font-size: 13px; text-shadow: 0 1px 2px #000; }
+  #reader.found .guide { border-color: #3ddc84; }
+  .result { border-radius: 14px; padding: 14px; display: grid; gap: 6px; }
+  .result.ok { background: var(--ok-bg); color: var(--ok); }
+  .result.bad { background: var(--bad-bg); color: var(--bad); }
+  .result.warn { background: var(--warn-bg); color: var(--warn); }
+  .result .t { font-size: 20px; font-weight: 700; }
+  .result .code { font-family: ui-monospace, Menlo, monospace; font-size: 14px; color: var(--ink); word-break: break-all; }
+  .result .d { font-size: 14px; color: var(--ink); white-space: pre-line; }
+  table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+  .card { min-width: 0; }
+  main > * { min-width: 0; }
+  th, td { padding: 8px 6px; border-bottom: 1px solid var(--line); text-align: right; font-size: 15px; }
+  th:first-child, td:first-child { text-align: left; }
+  th { font-size: 13px; color: var(--muted); font-weight: 500; }
+  td.gap { color: var(--warn); font-weight: 600; }
+  tr.total td { font-weight: 700; border-bottom: 0; }
+  .list { display: grid; gap: 6px; }
+  .item { display: flex; gap: 10px; align-items: center; border-bottom: 1px solid var(--line); padding: 6px 0; font-size: 14px; }
+  .item .c { font-family: ui-monospace, Menlo, monospace; word-break: break-all; }
+  .item .m { color: var(--muted); font-size: 12px; }
+  .item button { margin-left: auto; flex: none; }
+  .hint { font-size: 13px; color: var(--muted); }
+  .hide { display: none !important; }
+  .seg { display: grid; grid-template-columns: 1fr 1fr 1fr; background: #e3e8f2; border-radius: 12px; padding: 4px; gap: 4px; }
+  .seg button { border: 0; border-radius: 9px; padding: 11px; font-weight: 600; background: transparent; color: var(--muted); cursor: pointer; }
+  .seg button.on { background: #fff; color: var(--navy); box-shadow: 0 1px 2px rgba(11, 31, 77, .15); }
+  .seg button.on.out { background: var(--bad); color: #fff; }
+  .now.out { background: #7a1616; }
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; }
+  .chip.on.out { background: var(--bad); border-color: var(--bad); }
+  .tiles { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+  .tiles.val { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .tiles.val .tile:first-child { grid-column: 1 / -1; }
+  .tiles.val .tile:first-child b { font-size: 30px; }
+  .tile { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 12px; }
+  .tile b { display: block; font-size: clamp(17px, 5.2vw, 26px); white-space: nowrap; color: var(--navy); font-variant-numeric: tabular-nums; line-height: 1.2; }
+  .tile span { font-size: 13px; color: var(--muted); }
+  details.card summary { cursor: pointer; font-weight: 600; list-style: none; display: flex; justify-content: space-between; gap: 8px; }
+  details.card summary::-webkit-details-marker { display: none; }
+  details.card summary small { color: var(--muted); font-weight: 500; }
+  .tag { display: inline-block; border-radius: 6px; padding: 1px 7px; font-size: 12px; font-weight: 600; background: #e9edf5; color: var(--ink); }
+  .tag.in { background: var(--ok-bg); color: var(--ok); }
+  .tag.cut { background: var(--bad-bg); color: var(--bad); }
+  .tag.mv { background: var(--warn-bg); color: var(--warn); }
+  .viewtop { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .viewtop .hint { margin-right: auto; }
+  .viewtop .btn { flex: none; white-space: nowrap; }
+  .qty { display: grid; grid-template-columns: auto 1fr auto; gap: 8px; align-items: center; }
+  .qty input { text-align: center; font-size: 24px; font-weight: 700; }
+  .qty .btn { min-width: 56px; font-size: 20px; }
+  .quick { display: flex; gap: 8px; flex-wrap: wrap; }
+  .pick-list { max-height: 55vh; overflow-y: auto; display: grid; gap: 6px; }
+  .pick-list button { text-align: left; border: 1px solid var(--line); background: #fff; border-radius: 10px; padding: 10px 12px; cursor: pointer; color: var(--ink); }
+  .pick-list button small { display: block; color: var(--muted); font-size: 12px; }
+  .pick-list h4 { margin: 8px 0 0; font-size: 13px; color: var(--muted); font-weight: 600; }
+  td.low { color: var(--bad); font-weight: 700; }
+  .cnt-row { display: flex; gap: 10px; align-items: center; border-bottom: 1px solid var(--line); padding: 7px 0; font-size: 14px; }
+  .cnt-row .nm { flex: 1; min-width: 0; }
+  .cnt-row .nm small { display: block; color: var(--muted); font-size: 12px; font-family: ui-monospace, Menlo, monospace; }
+  .cnt-row input { width: 92px; flex: none; padding: 8px; text-align: center; }
+  .cnt-row .u { width: 42px; flex: none; color: var(--muted); font-size: 12px; }
+  .cnt-row.found { background: var(--ok-bg); }
+  .cnt-row.extra { background: var(--warn-bg); }
+  details.acb { border-top: 1px solid var(--line); padding: 8px 0 4px; }
+  details.acb > summary { display: flex; justify-content: space-between; gap: 8px; cursor: pointer; font-weight: 600; list-style: none; }
+  details.acb > summary small { color: var(--muted); font-weight: 400; font-size: 13px; }
+  tr.zero td { color: var(--muted); }
+  .pill { font-size: 12px; font-weight: 600; border-radius: 6px; padding: 2px 8px; flex: none; }
+  .pill.ok { background: var(--ok-bg); color: var(--ok); }
+  .pill.no { background: #eef1f6; color: var(--muted); }
+  .pill.bad { background: var(--bad-bg); color: var(--bad); }
+  .pill.warn { background: var(--warn-bg); color: var(--warn); }
+  .cnt-sec { display: grid; gap: 0; max-height: 50vh; overflow-y: auto; }
+  .cnt-h { margin: 10px 0 2px; font-size: 13px; color: var(--muted); font-weight: 600; display: flex; justify-content: space-between; }
+  .lbl-row { display: grid; grid-template-columns: auto 1fr 84px; gap: 10px; align-items: center; border-bottom: 1px solid var(--line); padding: 8px 0; }
+  .lbl-row input[type=checkbox] { width: 22px; height: 22px; }
+  .lbl-row input[type=number] { padding: 8px; text-align: center; }
+  .lbl-row small { display: block; color: var(--muted); font-size: 12px; }
+  #printArea { display: none; }
+  .sheet-a4 { width: 210mm; display: grid; grid-template-columns: repeat(3, 70mm); grid-auto-rows: var(--lh, 37.125mm); background: #fff; }
+  .lab { box-sizing: border-box; padding: 3mm 4mm; display: flex; flex-direction: column; justify-content: center; align-items: center; overflow: hidden; color: #000; font-family: 'Noto Sans Thai', sans-serif; text-align: center; border: 0.2mm dashed #ccd; }
+  .lab b { font-size: 10pt; line-height: 1.15; max-height: 2.3em; overflow: hidden; }
+  .lab svg { width: 100%; height: 15mm; }
+  .lab small { font-size: 7pt; color: #333; }
+  .preview { overflow-x: auto; border: 1px solid var(--line); border-radius: 10px; background: #fff; }
+  .preview .sheet-a4 { zoom: .45; height: 297mm; border-bottom: 2px solid #ccd; }
+  /* หน้าภาพรวมสต็อก */
+  main#screenView { max-width: 1360px; }
+  #viewBody { display: grid; gap: 12px; }
+  .vbar { display: grid; grid-template-columns: minmax(200px, 300px) minmax(0, 1fr) auto; gap: 12px; align-items: end; }
+  .vbar label { margin: 0; }
+  .vtab { grid-template-columns: 1fr 1fr; min-width: 200px; }
+  .vk { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 10px; }
+  .vk .tile b { font-size: 26px; }
+  .vval { display: grid; gap: 6px; align-content: start; }
+  .vval .row input { min-width: 0; }
+  .linkbtn { background: none; border: 0; padding: 0; color: #1f4fd1; text-decoration: underline; cursor: pointer; font: inherit; font-size: 13px; justify-self: start; }
+  .vchips { display: flex; gap: 8px; flex-wrap: wrap; }
+  .vrow { display: flex; gap: 8px 16px; flex-wrap: wrap; align-items: center; }
+  .vhas { display: flex; align-items: center; gap: 8px; margin: 0; min-height: 44px; font-weight: 400; }
+  .vhas input { width: 20px; height: 20px; }
+  .vrow .hint { margin-left: auto; }
+  .vscroll { overflow-x: auto; }
+  .vt { min-width: 520px; }
+  .vt th:first-child, .vt td:first-child { text-align: left; min-width: 200px; white-space: normal; }
+  .vt th { white-space: nowrap; }
+  .vt td.z { color: #9aa3b5; }
+  .vt td.tot { font-weight: 700; color: var(--navy); background: #eef3fa; }
+  .vt td.lowc { color: var(--bad); font-weight: 700; background: var(--bad-bg); }
+  .vt td small.gp { display: block; font-size: 11px; color: var(--warn); font-weight: 600; white-space: nowrap; }
+  .vt small.cd, .vcard small.cd { display: block; font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 12px; color: var(--muted); font-weight: 400; }
+  .vt tr.gh td { background: #eef3fa; color: var(--navy); font-weight: 700; text-align: left; }
+  .vt tr.gh small { color: var(--muted); font-weight: 400; }
+  .vt tr.vr { cursor: pointer; }
+  .vt tr.vr:hover td { background: #e8f4fe; }
+  .vt tr.vr.sel td { background: #e5edfe; }
+  .vgrid { display: flex; gap: 14px; align-items: flex-start; }
+  .vmain { flex: 1; min-width: 0; display: grid; gap: 12px; }
+  .vcards { display: grid; gap: 10px; }
+  .vcard { display: grid; grid-template-columns: 1fr auto; gap: 8px 12px; text-align: left; background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 12px 14px; font: inherit; color: var(--ink); width: 100%; }
+  button.vcard { cursor: pointer; }
+  .vcard.sel { border-color: #1f4fd1; }
+  .vc1 { display: grid; gap: 2px; min-width: 0; }
+  .vc1 b { color: var(--navy); }
+  .vcb { font-size: 12px; color: var(--muted); font-weight: 600; }
+  .vc2 { display: grid; justify-items: end; align-content: start; }
+  .vc2 b { font-size: 26px; line-height: 1.1; color: var(--navy); font-variant-numeric: tabular-nums; }
+  .vc2 b.z { color: #9aa3b5; }
+  .vc2 small { font-size: 12px; color: var(--muted); }
+  .vwh { grid-column: 1 / -1; display: flex; gap: 6px; flex-wrap: wrap; }
+  .vwh span { font-size: 12px; background: #e8f4fe; color: var(--navy); border-radius: 999px; padding: 2px 10px; }
+  .vwh span.lw { background: var(--bad-bg); color: var(--bad); font-weight: 600; }
+  .vgp { grid-column: 1 / -1; justify-self: start; font-size: 12px; color: var(--warn); background: var(--warn-bg); border-radius: 6px; padding: 2px 8px; font-weight: 600; }
+  .vdet { display: grid; gap: 10px; align-content: start; }
+  .vdet h2 { margin: 2px 0; font-size: 19px; color: var(--navy); }
+  .vdet h3 { margin: 6px 0 0; font-size: 15px; color: var(--navy); }
+  .vdh { display: flex; gap: 8px; align-items: flex-start; justify-content: space-between; }
+  .vdh small { color: var(--muted); }
+  .vline { display: flex; justify-content: space-between; gap: 8px; border-bottom: 1px solid var(--line); padding: 6px 0; font-size: 14px; }
+  .vline span:last-child { text-align: right; color: var(--muted); }
+  .vser { max-height: 260px; overflow-y: auto; }
+  @media (min-width: 900px) {
+    .vmob { display: none !important; }
+    .vshade { display: none; }
+    #vDet:empty { display: none; }
+    #vDet { flex: 0 0 360px; position: sticky; top: 72px; max-height: calc(100vh - 90px); overflow-y: auto; }
+  }
+  @media (max-width: 899px) {
+    .vdesk { display: none !important; }
+    .vbar { grid-template-columns: 1fr; }
+    .vchips { flex-wrap: nowrap; overflow-x: auto; padding-bottom: 4px; }
+    .vchips .chip { flex: none; }
+    .vk { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .vk .vval { grid-column: 1 / -1; }
+    .vrow .hint { margin-left: 0; }
+    .vshade { position: fixed; inset: 0; background: rgba(11, 31, 77, .4); z-index: 40; }
+    .vdet { position: fixed; left: 0; right: 0; bottom: 0; max-height: 82vh; overflow-y: auto; z-index: 41; border-radius: 18px 18px 0 0; margin: 0; }
+  }
+  /* ใบเช็คของบนรถ */
+  .chkpage { padding: 12mm; font-size: 12px; color: #000; page-break-after: always; }
+  .chkhead { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #000; padding-bottom: 6px; }
+  .chkt { font-size: 22px; font-weight: 700; }
+  .chkmeta { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 16px; margin: 8px 0; }
+  .chkpage h3 { font-size: 14px; margin: 10px 0 4px; }
+  .chkt2 { width: 100%; border-collapse: collapse; }
+  .chkt2 th, .chkt2 td { border: 1px solid #000; padding: 4px 6px; font-size: 12px; text-align: center; color: #000; }
+  .chkt2 td.l { text-align: left; }
+  .chkt2 td { height: 24px; }
+  .chkt2 td:nth-child(6), .chkt2 td:nth-child(7) { min-width: 50px; }
+  .chksign { display: flex; justify-content: space-between; margin-top: 28px; }
+  .chknote { margin-top: 10px; font-size: 11px; }
+  @media print { body.chkprint #printArea { display: block !important; } }
+  @media print {
+    @page { size: A4; margin: 0; }
+    body { background: #fff; }
+    body > *:not(#printArea) { display: none !important; }
+    #printArea { display: block !important; }
+    .sheet-a4 { page-break-after: always; height: 297mm; padding-top: var(--top, 0mm); }
+    .lab { border: 0; }
+  }
+  .sheet { position: fixed; inset: 0; background: rgba(11, 31, 77, .45); display: grid; align-items: end; z-index: 20; }
+  .sheet > div { background: #fff; border-radius: 18px 18px 0 0; padding: 18px 16px 24px; display: grid; gap: 10px; max-width: 560px; width: 100%; margin: 0 auto; }
+  .sheet h3 { margin: 0; font-size: 18px; }
+  .toast { position: fixed; left: 16px; right: 16px; bottom: 18px; background: var(--ink); color: #fff; padding: 12px 14px; border-radius: 12px; text-align: center; z-index: 30; max-width: 528px; margin: 0 auto; }
+  @media (prefers-reduced-motion: no-preference) { .result { animation: pop .18s ease-out; } @keyframes pop { from { transform: scale(.97); } to { transform: none; } } }
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="logo">RCA</div>
+  <b id="appTitle">สแกนแอร์ RCA</b>
+  <button class="who" id="whoBtn" type="button" aria-label="เปลี่ยนคนสแกนหรือคลัง"></button>
+</header>
+
+<main id="screenStart" class="hide">
+  <section class="card">
+    <h2>เริ่มใช้งาน</h2>
+    <label id="apiWrap" class="hide">ลิงก์ Web app ของ Apps Script<input id="api" inputmode="url" autocomplete="off" placeholder="https://script.google.com/macros/s/.../exec"></label>
+    <label id="pinWrap" class="hide">รหัสเข้าแอป<input id="pin" type="password" inputmode="numeric" autocomplete="off"></label>
+    <label>ชื่อคนสแกน<input id="name" autocomplete="name" placeholder="เช่น สมพงษ์"></label>
+    <label>คลังที่กำลังนับ<select id="loc"></select></label>
+    <button class="btn primary" id="startBtn" type="button">เริ่มสแกน</button>
+    <div class="hint" id="startMsg"></div>
+  </section>
+</main>
+
+<main id="screenMain" class="hide">
+  <div class="seg" role="tablist" aria-label="โหมด">
+    <button type="button" id="modeIn" class="on" role="tab">สแกนเข้า</button>
+    <button type="button" id="modeOut" role="tab">ตัดออก</button>
+    <button type="button" id="modeCount" role="tab">ตรวจนับ</button>
+  </div>
+  <div class="now" id="nowBox">
+    <div>
+      <div class="small">กำลังสแกนรุ่น</div>
+      <div class="big" id="nowModel">ยังไม่เลือกรุ่น</div>
+      <div class="small" id="nowModelFull"></div>
+    </div>
+    <button class="btn small" id="pickBtn" type="button">เปลี่ยนรุ่น</button>
+  </div>
+
+  <section class="card hide" id="cutCard">
+    <h2>ตัดออกเพราะอะไร เลือกครั้งเดียว แล้วสแกนกล่องที่จะออกต่อกันได้</h2>
+    <div class="chips" id="whys"></div>
+    <label id="refWrap" class="hide"><span id="refLabel">ชื่อลูกค้าหรือเลขใบงาน</span><input id="ref" autocomplete="off"></label>
+    <label id="destWrap" class="hide">ย้ายไปที่<select id="dest"></select></label>
+    <label id="cutPinWrap" class="hide">รหัสตัดสต๊อก<input id="cutPin" type="password" inputmode="numeric" autocomplete="off"></label>
+    <div class="hint">แอร์ 1 ชุดมี 2 กล่อง สแกนทั้งคอยล์เย็นและคอยล์ร้อน</div>
+  </section>
+
+  <section class="card hide" id="cntCard"></section>
+
+  <section class="card" id="billCard">
+    <h2>รับของตามบิล ไม่ใส่ก็ได้</h2>
+    <form class="row" id="billForm"><input id="bill" placeholder="เลขใบกำกับ เลข DO หรือเลข PO" autocomplete="off" autocapitalize="characters"><button class="btn" type="submit" style="flex:none">ตรวจ</button></form>
+    <div id="billBox"></div>
+  </section>
+
+  <section class="card" id="pickCard">
+    <h2>เลือกรุ่นที่จะสแกน แล้วสแกนกล่องรุ่นนั้นต่อกันได้เลย</h2>
+    <input id="modelQ" placeholder="ค้นยี่ห้อ รุ่น หรือ BTU เช่น daikin 12000" autocomplete="off">
+    <div class="sets" id="sets"></div>
+    <label class="row" style="display:flex"><input type="checkbox" id="auto" style="width:auto;flex:none"> <span>เลือกรุ่นให้อัตโนมัติถ้าเลขเครื่องตรงกับคำในชีทรุ่นแอร์</span></label>
+  </section>
+
+  <section class="card">
+    <div id="reader" class="hide"><video id="video" playsinline muted></video><div class="guide"><span>วางบาร์โค้ดเลขเครื่องให้อยู่ในกรอบ</span></div></div>
+    <div class="row">
+      <button class="btn navy" id="camBtn" type="button">เปิดกล้องสแกน</button>
+      <button class="btn ghost" id="photoBtn" type="button">ถ่ายรูปบาร์โค้ด</button>
+    </div>
+    <a class="btn ghost small hide" id="liveLink" target="_blank" rel="noopener" href="#">เปิดแอปแบบกล้องสด สแกนได้เร็วกว่า</a>
+    <button class="btn ghost small hide" id="torchBtn" type="button">เปิดไฟฉาย</button>
+    <input id="photo" type="file" accept="image/*" capture="environment" class="hide">
+    <button class="btn ghost small" id="itemPickBtn" type="button">อุปกรณ์ไม่มีป้าย เลือกจากรายการ</button>
+    <form class="row" id="typeForm">
+      <input id="typed" placeholder="พิมพ์เลขเครื่องหรือรหัสป้าย หรือใช้เครื่องยิงบาร์โค้ด" autocomplete="off" autocapitalize="characters">
+      <button class="btn" type="submit" style="flex:none">บันทึก</button>
+    </form>
+  </section>
+
+  <div id="result" class="hide"></div>
+
+  <section class="card" id="balCard">
+    <h2 id="countTitle">ยอดในคลังนี้</h2>
+    <table>
+      <thead><tr><th>รุ่น</th><th>เย็น</th><th>ร้อน</th><th>ครบชุด</th></tr></thead>
+      <tbody id="counts"></tbody>
+    </table>
+    <div class="hint">ครบชุด นับเมื่อมีทั้งคอยล์เย็นและคอยล์ร้อน ตัวเลขสีส้มคือกล่องที่ยังไม่มีคู่</div>
+  </section>
+
+  <section class="card" id="itemBalCard">
+    <h2>อุปกรณ์และของใช้ในคลังนี้</h2>
+    <table>
+      <thead><tr><th>ของ</th><th>คงเหลือ</th></tr></thead>
+      <tbody id="itemCounts"></tbody>
+    </table>
+    <div class="hint">ตัวเลขสีแดงคือต่ำกว่าขั้นต่ำที่ตั้งไว้ในแผ่นอุปกรณ์</div>
+  </section>
+
+  <button class="btn ghost" type="button" id="toView">ดูยอดทุกคลัง</button>
+
+  <section class="card" id="mineCard">
+    <h2 id="mineTitle">ที่ฉันสแกนล่าสุด</h2>
+    <div class="list" id="mine"></div>
+  </section>
+</main>
+
+<main id="screenView" class="hide">
+  <div class="viewtop"><div class="hint" id="viewAt">ดูอย่างเดียว แก้ไขไม่ได้</div><button class="btn small" type="button" id="viewRefresh">โหลดใหม่</button><button class="btn small ghost hide" type="button" id="viewBack">กลับไปสแกน</button></div>
+  <section class="card hide" id="viewPinCard">
+    <label>รหัสดูยอด<input id="viewPin" type="password" inputmode="numeric" autocomplete="off"></label>
+    <button class="btn primary" type="button" id="viewPinBtn">ดูยอด</button>
+    <div class="hint" id="viewMsg"></div>
+  </section>
+  <div id="viewBody"></div>
+</main>
+
+<main id="screenLabels" class="hide">
+  <section class="card">
+    <h2>พิมพ์ป้ายบาร์โค้ดอุปกรณ์</h2>
+    <div class="hint">ของต่อชนิด ใช้ป้ายรหัสเดียวกันทั้งกอง ติดที่ชั้นหรือติดทุกชิ้นก็ได้ ของต่อชิ้น ได้เลขไม่ซ้ำทุกใบ ระบบจองเลขให้ ติด 1 ใบต่อ 1 ชิ้น</div>
+    <label id="lblPinWrap" class="hide">รหัสเข้าแอป<input id="lblPin" type="password" inputmode="numeric" autocomplete="off"></label>
+    <label>ขนาดสติกเกอร์ A4<select id="lblSize"><option value="24">24 ดวงต่อแผ่น 70 x 37 มม.</option><option value="21">21 ดวงต่อแผ่น 70 x 42 มม.</option></select></label>
+    <input id="lblSearch" placeholder="ค้นชื่อหรือรหัส" autocomplete="off">
+    <div id="lblList"></div>
+    <div class="row"><button class="btn primary" type="button" id="lblMake">สร้างป้าย</button><button class="btn navy" type="button" id="lblPrint" disabled>พิมพ์</button></div>
+    <div class="hint" id="lblMsg"></div>
+  </section>
+  <div class="preview hide" id="lblPreview"></div>
+</main>
+<div id="printArea"></div>
+
+<div id="sheet" class="sheet hide" role="dialog" aria-modal="true"><div id="sheetBody"></div></div>
+<div id="toast" class="toast hide" role="status"></div>
+
+<script>
+(function () {
+  var $ = function (id) { return document.getElementById(id); };
+  var KEY = 'rca-scan-v1';
+  var st = {};
+  try { st = JSON.parse(localStorage.getItem(KEY) || '{}'); } catch (e) { st = {}; }
+  var save = function () { try { localStorage.setItem(KEY, JSON.stringify(st)); } catch (e) {} };
+  if (st.auto == null) st.auto = true;
+  if (!st.mode) st.mode = 'in';
+  var WHYS = [], NEEDCUT = false, VIEW = false, LABELS = false, ITEMS = [], IBAL = {};
+  var MODELS = [], LOCS = [], busy = false, last = '', lastAt = 0, cam = null, camOn = false;
+
+  function esc(s) { return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
+  // ลิงก์ Web app ของ Apps Script (ใช้เมื่อวางหน้านี้ไว้นอก Apps Script เช่น GitHub Pages)
+  var API_URL = 'https://script.google.com/macros/s/AKfycbw665Hi9qUi8q7SNf5EBQAlSvR1hZtasnY3Jb37K6UhxL52L7Df0qJrikkt5ofw4Z-zSQ/exec';
+  // ที่อยู่หน้าแอปแบบกล้องสด (หน้าเดียวกันนี้ที่วางบนเว็บของเราเอง) ใส่แล้วหน้าใน Apps Script จะมีปุ่มพาไป
+  var HOSTED_URL = '';
+  var IN_GAS = !!(window.google && google.script && google.script.run);
+  var qApi = (location.search.match(/[?&]api=([^&]+)/) || [])[1];
+  if (qApi) { st.api = decodeURIComponent(qApi); save(); }
+  var API = API_URL || st.api || '';
+  function run(fn, arg) {
+    if (IN_GAS) {
+      return new Promise(function (ok, bad) {
+        google.script.run.withSuccessHandler(ok).withFailureHandler(function (e) { bad(e && e.message ? e.message : String(e)); })[fn](arg);
+      });
+    }
+    if (!API) return Promise.reject('ใส่ลิงก์ Web app ของ Apps Script ก่อน');
+    return fetch(API, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ fn: fn, arg: arg }) })
+      .then(function (r) { return r.json(); })
+      .then(function (j) { if (!j.ok) throw j.error; return j.data; })
+      .catch(function (e) { throw e instanceof Error ? 'ต่อ Apps Script ไม่ได้ ตรวจลิงก์และอินเทอร์เน็ต' : String(e); });
+  }
+  // หน้า Apps Script ถูกปิดกล้องสด ให้ใช้ถ่ายรูปเป็นหลัก
+  var LIVE_OK = !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia) && !(document.featurePolicy && document.featurePolicy.allowsFeature && !document.featurePolicy.allowsFeature('camera'));
+  function toast(t) { var el = $('toast'); el.textContent = t; el.classList.remove('hide'); clearTimeout(toast.t); toast.t = setTimeout(function () { el.classList.add('hide'); }, 2600); }
+  var actx = null;
+  function beep(good) {
+    try {
+      actx = actx || new (window.AudioContext || window.webkitAudioContext)();
+      var tones = good ? [[1046, 0, .12]] : [[220, 0, .18], [180, .24, .22]];
+      tones.forEach(function (t) { var o = actx.createOscillator(), g = actx.createGain(); o.frequency.value = t[0]; o.connect(g); g.connect(actx.destination); g.gain.value = .18; o.start(actx.currentTime + t[1]); o.stop(actx.currentTime + t[1] + t[2]); });
+    } catch (e) {}
+    if (navigator.vibrate) navigator.vibrate(good ? 60 : [120, 80, 120]);
+  }
+  function modelOf(m) { return MODELS.filter(function (x) { return x.model === m; })[0]; }
+  function setLabel(set) { var m = MODELS.filter(function (x) { return x.set === set; })[0]; return m && m.label ? m.label : set; }
+  function typeShort(t) { return t === 'คอยล์เย็น' ? 'เย็น' : t === 'คอยล์ร้อน' ? 'ร้อน' : 'ชิ้นเดียว'; }
+
+  // ---------- เริ่ม ----------
+  var NEEDPIN = false;
+  function boot() {
+    if (VIEW) { showView(); return; }
+    if (LABELS) { showLabels(); return; }
+    run('getInit', st.pin || '').then(function (r) {
+      NEEDPIN = !!r.needPin;
+      if (!r.ok) { LOCS = r.locs || []; showStart(true, st.pin ? 'รหัสเข้าแอปไม่ถูกต้อง' : 'ใส่รหัสเข้าแอป ชื่อ และเลือกคลัง'); return; }
+      MODELS = r.models; LOCS = r.locs;
+      if (!LOCS.length) { showStart(NEEDPIN, 'ยังไม่มีรายชื่อคลัง ใส่ในแผ่น คลัง ของชีท ช่องใช้งานเป็น ใช่'); return; } WHYS = r.whys || []; NEEDCUT = !!r.needCutPin; ITEMS = r.items || [];
+      if (st.name && st.loc && LOCS.indexOf(st.loc) >= 0) showMain();
+      else showStart(NEEDPIN, st.name || st.loc ? 'ใส่ชื่อคนสแกนและเลือกคลัง' : '');
+    }).catch(function (e) { showStart(NEEDPIN, String(e)); });
+  }
+  function showStart(needPin, msg) {
+    $('screenMain').classList.add('hide'); $('screenView').classList.add('hide'); $('screenStart').classList.remove('hide');
+    $('pinWrap').classList.toggle('hide', !needPin);
+    $('apiWrap').classList.toggle('hide', IN_GAS || !!API_URL);
+    $('api').value = st.api || '';
+    $('pin').value = st.pin || ''; $('name').value = st.name || '';
+    $('loc').innerHTML = '<option value="">เลือกคลัง</option>' + LOCS.map(function (l) { return '<option' + (l === st.loc ? ' selected' : '') + '>' + esc(l) + '</option>'; }).join('');
+    $('startMsg').textContent = msg || '';
+    $('startMsg').style.color = msg && !/^ใส่/.test(msg) ? 'var(--bad)' : '';
+    $('whoBtn').innerHTML = '';
+    stopCam();
+  }
+  $('startBtn').onclick = function () {
+    st.pin = $('pin').value.trim(); st.name = $('name').value.trim(); st.loc = $('loc').value;
+    if (!IN_GAS && !API_URL) { st.api = $('api').value.trim(); API = st.api; }
+    save();
+    if (!$('pinWrap').classList.contains('hide') && !st.pin) { $('startMsg').textContent = 'ใส่รหัสเข้าแอปก่อน'; return; }
+    if (!st.name) { $('startMsg').textContent = 'ใส่ชื่อคนสแกนก่อน'; return; }
+    if (LOCS.length && !st.loc) { $('startMsg').textContent = 'เลือกคลังก่อน'; return; }
+    $('startMsg').textContent = 'กำลังเปิด';
+    boot();
+  };
+  $('whoBtn').onclick = function () { if (!$('screenMain').classList.contains('hide')) showStart(NEEDPIN, ''); };
+
+  function showMain() {
+    $('screenStart').classList.add('hide'); $('screenView').classList.add('hide'); $('screenMain').classList.remove('hide');
+    $('whoBtn').innerHTML = esc(st.name) + '<span>' + esc(st.loc) + '</span>';
+    $('countTitle').textContent = 'ยอดใน ' + st.loc;
+    $('auto').checked = !!st.auto;
+    if (st.model && !modelOf(st.model)) st.model = '';
+    renderWhys(); renderMode(); refresh();
+    if (IN_GAS && HOSTED_URL) { $('liveLink').href = HOSTED_URL; $('liveLink').classList.remove('hide'); }
+    if (!LIVE_OK) { $('camBtn').classList.add('hide'); $('photoBtn').classList.remove('ghost'); $('photoBtn').classList.add('navy'); $('photoBtn').textContent = 'ถ่ายรูปบาร์โค้ด'; }
+  }
+
+  // ---------- โหมด สแกนเข้า หรือ ตัดออก ----------
+  var OUT = function () { return st.mode === 'out'; };
+  var CNT = function () { return st.mode === 'count'; };
+  var MOTO = function () { return /^มอเตอร์ไซค์/.test(st.loc || ''); };
+  function renderMode() {
+    $('modeIn').classList.toggle('on', st.mode === 'in'); $('modeOut').classList.toggle('on', OUT()); $('modeOut').classList.toggle('out', OUT()); $('modeCount').classList.toggle('on', CNT());
+    $('cutCard').classList.toggle('hide', !OUT());
+    $('cntCard').classList.toggle('hide', !CNT());
+    $('billCard').classList.toggle('hide', st.mode !== 'in');
+    if (st.mode === 'in') loadBill();
+    $('nowBox').classList.toggle('out', OUT());
+    $('pickBtn').classList.toggle('hide', OUT() || CNT());
+    // ตรวจนับ: ซ่อนยอดในระบบระหว่างนับ
+    ['balCard', 'itemBalCard', 'mineCard', 'toView'].forEach(function (k) { $(k).classList.toggle('hide', CNT()); });
+    $('mineTitle').textContent = OUT() ? 'ที่ฉันตัดออกล่าสุด' : 'ที่ฉันสแกนล่าสุด';
+    if (OUT() || CNT() || MOTO()) $('pickCard').classList.add('hide'); else renderPick();
+    if (CNT()) renderCnt();
+    renderNow();
+    $('result').className = 'hide';
+    loadMine();
+  }
+  $('modeIn').onclick = function () { st.mode = 'in'; save(); renderMode(); };
+  $('modeOut').onclick = function () { st.mode = 'out'; save(); renderMode(); };
+  $('modeCount').onclick = function () { st.mode = 'count'; save(); renderMode(); };
+  function renderWhys() {
+    $('whys').innerHTML = WHYS.map(function (w) { return '<button type="button" class="chip' + (st.why === w ? ' on out' : '') + '" data-w="' + esc(w) + '">' + esc(w) + '</button>'; }).join('');
+    var sell = st.why === WHYS[0], move = st.why === WHYS[1], other = st.why === 'อื่น ๆ';
+    $('refWrap').classList.toggle('hide', !(sell || other || move));
+    $('refLabel').textContent = sell ? 'ชื่อลูกค้าหรือเลขใบงาน' : move ? 'หมายเหตุ (ไม่ต้องใส่ก็ได้)' : 'เขียนเหตุผล';
+    $('ref').value = st.ref || '';
+    $('destWrap').classList.toggle('hide', !move);
+    $('dest').innerHTML = '<option value="">เลือกคลังหรือรถ</option>' + LOCS.filter(function (l) { return l !== st.loc; }).map(function (l) { return '<option' + (l === st.dest ? ' selected' : '') + '>' + esc(l) + '</option>'; }).join('');
+    $('cutPinWrap').classList.toggle('hide', !NEEDCUT);
+    $('cutPin').value = st.cutPin || '';
+  }
+  $('whys').onclick = function (e) { var b = e.target.closest('[data-w]'); if (!b) return; var w = b.getAttribute('data-w'); if (w !== st.why) st.ref = ''; st.why = w; if (st.why !== WHYS[1]) st.dest = ''; save(); renderWhys(); renderNow(); };
+  $('ref').oninput = function () { st.ref = $('ref').value; save(); renderNow(); };
+  $('dest').onchange = function () { st.dest = $('dest').value; save(); renderNow(); };
+  $('cutPin').oninput = function () { st.cutPin = $('cutPin').value.trim(); save(); };
+  function cutText() {
+    if (!st.why) return '';
+    if (st.why === WHYS[1]) return 'ย้ายไป ' + (st.dest || 'ยังไม่เลือก');
+    return st.why + (st.ref ? ' ' + st.ref : '');
+  }
+  function cutReady() {
+    if (!st.why) return 'เลือกเหตุผลที่ตัดออกก่อน';
+    if (st.why === WHYS[0] && !String(st.ref || '').trim()) return 'ใส่ชื่อลูกค้าหรือเลขใบงานก่อน';
+    if (st.why === 'อื่น ๆ' && !String(st.ref || '').trim()) return 'เขียนเหตุผลก่อน';
+    if (st.why === WHYS[1] && !st.dest) return 'เลือกคลังหรือรถปลายทางก่อน';
+    if (NEEDCUT && !st.cutPin) return 'ใส่รหัสตัดสต๊อกก่อน';
+    return '';
+  }
+  function cutSubmit(code, anyLoc) {
+    busy = true;
+    showResult('warn', 'กำลังตัดออก', code, cutText());
+    run('cutScan', { pin: st.pin, cutPin: st.cutPin, code: code, loc: st.loc, name: st.name, why: st.why, ref: st.ref, dest: st.dest, anyLoc: anyLoc }).then(function (r) {
+      busy = false;
+      if (r.ok) {
+        beep(true);
+        var m = modelOf(r.model), lab = (m && m.label) || r.set || r.model;
+        var title = r.dest ? 'ย้ายไป ' + r.dest + ' แล้ว' : 'ตัดออกแล้ว';
+        showResult(r.pair ? 'warn' : 'ok', title, r.code, lab + ' ' + r.type + (r.from !== st.loc ? ' จาก ' + r.from : '') + (r.pair ? '\n' + r.pair : ''));
+        renderCounts(r.counts); loadMine();
+      } else if (r.otherLoc) {
+        beep(false);
+        showResult('bad', 'กล่องนี้ไม่ได้อยู่คลังนี้', code, r.msg + ' รุ่น ' + r.model, '<button class="btn small navy" type="button" id="anyBtn">ตัดออกจาก ' + esc(r.loc) + '</button>');
+        $('anyBtn').onclick = function () { cutSubmit(code, true); };
+      } else if (r.already) {
+        beep(false); showResult('bad', 'กล่องนี้ตัดออกไปแล้ว', code, 'เมื่อ ' + r.when + ' โดย ' + r.by + ' เพราะ ' + r.why + (r.ref ? ' ' + r.ref : ''));
+      } else {
+        beep(false); showResult('bad', 'ยังไม่ได้ตัดออก', code, r.msg || '');
+      }
+    }).catch(function (e) { busy = false; beep(false); showResult('bad', 'ยังไม่ได้ตัดออก', code, e + ' ลองใหม่อีกครั้ง'); });
+  }
+
+  // ---------- อุปกรณ์และของใช้ ----------
+  function itemOf(code) {
+    for (var i = 0; i < ITEMS.length; i++) {
+      var it = ITEMS[i];
+      if (code === it.code) return { item: it, label: code, piece: false };
+      if (it.per === 'ต่อชิ้น' && code.indexOf(it.code + '-') === 0 && /^\d{1,6}$/.test(code.slice(it.code.length + 1))) return { item: it, label: code, piece: true };
+    }
+    return null;
+  }
+  function fmtQ(n) { return String(Math.round(n * 100) / 100); }
+  function handleItem(f) {
+    if (OUT()) { var w = cutReady(); if (w) { beep(false); showResult('warn', w, f.label, 'ตั้งค่าในกล่องด้านบนแล้วสแกนใหม่'); return; } }
+    if (f.piece) { submitItem(f, 1, false); return; }
+    if (f.item.per === 'ต่อชิ้น') { beep(false); showResult('warn', 'ของนี้ต้องสแกนป้ายประจำชิ้น', f.label, f.item.name + ' ติดป้ายต่อชิ้น ใช้ป้ายที่มีเลขต่อท้าย'); return; }
+    var it = f.item, has = IBAL[it.code] || 0, dec = /เมตร|กก|ลิตร/.test(it.unit);
+    openSheet('<h3>' + esc(it.name) + '</h3><div class="hint">' + esc(it.code) + ' ในคลังนี้มี ' + fmtQ(has) + ' ' + esc(it.unit) + '</div>' +
+      '<div class="qty"><button class="btn" type="button" id="qMinus">-</button><input id="qVal" type="number" inputmode="' + (dec ? 'decimal' : 'numeric') + '" min="0" step="' + (dec ? '0.5' : '1') + '" value="' + (OUT() ? 1 : billLeft(it.code) || 1) + '"><button class="btn" type="button" id="qPlus">+</button></div>' +
+      '<div class="quick">' + [5, 10, 20, 50].map(function (n) { return '<button class="chip" type="button" data-q="' + n + '">' + n + ' ' + esc(it.unit) + '</button>'; }).join('') + '</div>' +
+      (OUT() ? '' : '<label>ราคาซื้อต่อ' + esc(it.unit) + ' ใส่เมื่อมีบิล ไม่ใส่ก็ได้<input id="qPrice" type="number" inputmode="decimal" min="0" step="0.01" placeholder="บาท"></label>') +
+      '<button class="btn ' + (OUT() ? 'navy' : 'primary') + '" type="button" data-x="ok" style="' + (OUT() ? 'background:var(--bad)' : '') + '">' + (OUT() ? (st.why === WHYS[1] ? 'ย้ายไป ' + esc(st.dest) : 'ตัดออก') : 'รับเข้า') + '</button><button class="btn ghost" type="button" data-x="">ไม่บันทึก</button>',
+      function (x, v) { if (x === 'ok') submitItem(f, v.q, false, v.p); }, function () { return { q: Number($('qVal').value), p: $('qPrice') ? Number($('qPrice').value) || 0 : 0 }; });
+    var q = $('qVal'), step = dec ? 0.5 : 1;
+    $('qMinus').onclick = function () { q.value = Math.max(0, (Number(q.value) || 0) - step); };
+    $('qPlus').onclick = function () { q.value = (Number(q.value) || 0) + step; };
+    $('sheetBody').querySelector('.quick').onclick = function (e) { var b = e.target.closest('[data-q]'); if (b) q.value = b.getAttribute('data-q'); };
+    setTimeout(function () { q.select(); }, 50);
+  }
+  function submitItem(f, qty, anyLoc, price) {
+    if (!(qty > 0)) { toast('ใส่จำนวนก่อน'); return; }
+    busy = true;
+    showResult('warn', 'กำลังบันทึก', f.label, f.item.name + ' ' + fmtQ(qty) + ' ' + f.item.unit);
+    run('saveItem', { pin: st.pin, cutPin: st.cutPin, label: f.label, qty: qty, loc: st.loc, name: st.name, mode: OUT() ? 'out' : 'in', why: st.why, ref: st.ref, dest: st.dest, anyLoc: anyLoc, price: price || 0, bill: OUT() ? '' : (st.bill || '') }).then(function (r) {
+      busy = false;
+      if (r.ok) {
+        beep(true);
+        var t = r.kind === 'รับเข้า' ? 'รับเข้าแล้ว' : r.dest ? 'ย้ายไป ' + r.dest + ' แล้ว' : 'ตัดออกแล้ว';
+        showResult(r.low ? 'warn' : 'ok', t, r.label, r.name + ' ' + fmtQ(r.qty) + ' ' + r.unit + '\nคงเหลือในคลังนี้ ' + fmtQ(r.bal) + ' ' + r.unit + (r.low ? ' ต่ำกว่าขั้นต่ำ ' + r.min : ''));
+        renderItems(r.items); loadMine(); if (!OUT() && st.bill) loadBill();
+      } else if (r.otherLoc) {
+        beep(false);
+        showResult('bad', 'ของชิ้นนี้ไม่ได้อยู่คลังนี้', f.label, r.msg, '<button class="btn small navy" type="button" id="anyBtn">ตัดออกจาก ' + esc(r.loc) + '</button>');
+        $('anyBtn').onclick = function () { submitItem(f, qty, true); };
+      } else {
+        beep(false); showResult('bad', r.dup ? 'ป้ายนี้นับไปแล้ว' : 'ยังไม่ได้บันทึก', f.label, r.msg || '');
+      }
+    }).catch(function (e) { busy = false; beep(false); showResult('bad', 'ยังไม่ได้บันทึก', f.label, e + ' ลองใหม่อีกครั้ง'); });
+  }
+  function renderItems(list) {
+    IBAL = {};
+    (list || []).forEach(function (x) { IBAL[x.code] = x.bal; });
+    $('itemCounts').innerHTML = (list || []).map(function (x) {
+      return '<tr><td>' + esc(x.name) + '</td><td' + (x.low ? ' class="low"' : '') + '>' + fmtQ(x.bal) + ' ' + esc(x.unit) + '</td></tr>';
+    }).join('') || '<tr><td colspan="2" class="hint">ยังไม่มี</td></tr>';
+  }
+  $('itemPickBtn').onclick = function () {
+    var cats = [];
+    ITEMS.forEach(function (it) { if (cats.indexOf(it.cat) < 0) cats.push(it.cat); });
+    openSheet('<h3>เลือกอุปกรณ์</h3><input id="pickQ" placeholder="ค้นชื่อ" autocomplete="off"><div class="pick-list" id="pickList">' + cats.map(function (c) {
+      return '<h4>' + esc(c) + '</h4>' + ITEMS.filter(function (it) { return it.cat === c; }).map(function (it) {
+        return '<button type="button" data-x="' + esc(it.code) + '" data-n="' + esc(it.name.toLowerCase()) + '">' + esc(it.name) + '<small>' + esc(it.code + ' หน่วย ' + it.unit + (it.per === 'ต่อชิ้น' ? ' ต้องสแกนป้ายประจำชิ้น' : '')) + '</small></button>';
+      }).join('');
+    }).join('') + '</div><button class="btn ghost" type="button" data-x="">ปิด</button>', function (code) {
+      if (!code) return;
+      var it = ITEMS.filter(function (x) { return x.code === code; })[0];
+      if (it) setTimeout(function () { if (CNT()) countScan(it.code, true); else handleItem({ item: it, label: it.code, piece: false }); }, 30);
+    });
+    $('pickQ').oninput = function () { var q = $('pickQ').value.trim().toLowerCase(); $('pickList').querySelectorAll('button').forEach(function (b) { b.classList.toggle('hide', !!q && b.getAttribute('data-n').indexOf(q) < 0); }); };
+  };
+
+  // ---------- ตรวจนับคลังและรถ ----------
+  function renderCnt() {
+    var c = st.cnt, el = $('cntCard'), h = '';
+    if (!c) {
+      h = '<h2>ตรวจนับคลังหรือรถ</h2><label>นับที่<select id="cntLoc">' + LOCS.map(function (l) { return '<option' + (l === st.loc ? ' selected' : '') + '>' + esc(l) + '</option>'; }).join('') + '</select></label>' +
+        '<button class="btn primary" type="button" id="cntGo">เริ่มนับ</button><div class="hint">ระบบแสดงรายการที่ควรมี แต่ไม่บอกจำนวน นับของจริงแล้วสแกนหรือใส่จำนวน เสร็จแล้วกดส่ง ระบบเทียบให้เป็นรายงาน</div>';
+      el.innerHTML = h;
+      $('cntGo').onclick = cntStart;
+      return;
+    }
+    if (c.report) { renderReport(el, c.report, true); return; }
+    var fa = c.ac.filter(function (x) { return x.f; }).length, fp = c.pieces.filter(function (x) { return x.f; }).length, ft = c.types.filter(function (x) { return x.q !== ''; }).length;
+    h = '<h2>กำลังนับ ' + esc(c.loc) + '</h2>' +
+      '<div class="hint">แอร์ ' + fa + '/' + c.ac.length + ' กล่อง' + (c.xac.length ? ' เจอเพิ่ม ' + c.xac.length : '') + '  อุปกรณ์ต่อชิ้น ' + fp + '/' + c.pieces.length + (c.xpc.length ? ' เจอเพิ่ม ' + c.xpc.length : '') + '  อุปกรณ์ ใส่จำนวนแล้ว ' + ft + '/' + c.types.length + '</div>';
+    if (c.ac.length || c.xac.length) {
+      h += '<div class="cnt-h"><span>แอร์ สแกนทุกกล่อง</span><span>' + fa + '/' + c.ac.length + '</span></div><div class="cnt-sec">' +
+        c.ac.map(function (x) { return '<div class="cnt-row' + (x.f ? ' found' : '') + '"><div class="nm">' + esc(x.label + ' ' + x.type) + '<small>' + esc(x.code) + '</small></div><span class="pill ' + (x.f ? 'ok' : 'no') + '">' + (x.f ? 'เจอแล้ว' : 'ยังไม่เจอ') + '</span></div>'; }).join('') +
+        c.xac.map(function (x) { return '<div class="cnt-row extra"><div class="nm">ไม่อยู่ในรายการของที่นี่<small>' + esc(x) + '</small></div><span class="pill warn">เจอเพิ่ม</span></div>'; }).join('') + '</div>';
+    }
+    if (c.pieces.length || c.xpc.length) {
+      h += '<div class="cnt-h"><span>อุปกรณ์ต่อชิ้น สแกนป้ายทุกชิ้น</span><span>' + fp + '/' + c.pieces.length + '</span></div><div class="cnt-sec">' +
+        c.pieces.map(function (x) { return '<div class="cnt-row' + (x.f ? ' found' : '') + '"><div class="nm">' + esc(x.name) + '<small>' + esc(x.label) + '</small></div><span class="pill ' + (x.f ? 'ok' : 'no') + '">' + (x.f ? 'เจอแล้ว' : 'ยังไม่เจอ') + '</span></div>'; }).join('') +
+        c.xpc.map(function (x) { return '<div class="cnt-row extra"><div class="nm">' + esc(x.name) + '<small>' + esc(x.label) + '</small></div><span class="pill warn">เจอเพิ่ม</span></div>'; }).join('') + '</div>';
+    }
+    h += '<div class="cnt-h"><span>อุปกรณ์ ใส่จำนวนที่นับได้</span><span>' + ft + '/' + c.types.length + '</span></div><div class="cnt-sec" id="cntTypes">' +
+      (c.types.map(function (x, i) { return '<div class="cnt-row' + (x.q !== '' ? ' found' : '') + (x.x ? ' extra' : '') + '" id="ct-' + esc(x.code) + '"><div class="nm">' + esc(x.name) + '<small>' + esc(x.code) + (x.x ? ' ไม่อยู่ในรายการของที่นี่' : '') + '</small></div><input type="number" inputmode="decimal" min="0" step="any" data-i="' + i + '" value="' + esc(x.q) + '" placeholder="นับได้" aria-label="จำนวน ' + esc(x.name) + '"><span class="u">' + esc(x.unit) + '</span></div>'; }).join('') || '<div class="hint">ไม่มีอุปกรณ์ในรายการ สแกนป้ายหรือเลือกจากรายการเพื่อเพิ่ม</div>') + '</div>' +
+      '<button class="btn primary" type="button" id="cntSend">ส่งผลนับ</button><button class="btn ghost small" type="button" id="cntStop">ยกเลิกรอบนี้</button>';
+    el.innerHTML = h;
+    $('cntTypes').oninput = function (e) { var i = e.target.getAttribute('data-i'); if (i == null) return; c.types[i].q = e.target.value === '' ? '' : e.target.value; save(); e.target.closest('.cnt-row').classList.toggle('found', e.target.value !== ''); };
+    $('cntSend').onclick = cntSubmit;
+    $('cntStop').onclick = function () { openSheet('<h3>ยกเลิกรอบนับนี้</h3><div class="hint">ที่นับไว้จะหายทั้งหมด ยังไม่ได้ส่งเข้าชีท</div><button class="btn" type="button" data-x="yes" style="background:var(--bad);color:#fff">ยกเลิกรอบนี้</button><button class="btn ghost" type="button" data-x="">นับต่อ</button>', function (x) { if (x === 'yes') { st.cnt = null; save(); renderCnt(); renderNow(); } }); };
+  }
+  function cntStart() {
+    var loc = $('cntLoc').value;
+    $('cntGo').disabled = true;
+    run('countStart', { pin: st.pin, loc: loc }).then(function (r) {
+      if (!r.ok) { toast(r.msg); $('cntGo').disabled = false; return; }
+      st.cnt = { loc: r.loc, at: r.at, ac: r.ac.map(function (x) { x.f = 0; return x; }), pieces: r.pieces.map(function (x) { x.f = 0; return x; }), types: r.types.map(function (x) { x.q = ''; return x; }), xac: [], xpc: [] };
+      save(); renderCnt(); renderNow();
+      toast('เริ่มนับ ' + r.loc);
+    }).catch(function (e) { toast(String(e)); $('cntGo').disabled = false; });
+  }
+  function countScan(code, picked) {
+    var c = st.cnt;
+    if (!c || c.report) { beep(false); toast(c ? 'ส่งผลรอบนี้แล้ว กดนับรอบใหม่' : 'กดเริ่มนับก่อน'); return; }
+    var f = itemOf(code), msg;
+    if (f && f.piece) {
+      var pc = c.pieces.filter(function (x) { return x.label === code; })[0];
+      if (pc) { if (pc.f) { beep(false); toast('ชิ้นนี้นับแล้ว'); return; } pc.f = 1; msg = 'เจอ ' + pc.name; beep(true); }
+      else if (c.xpc.some(function (x) { return x.label === code; })) { beep(false); toast('ชิ้นนี้นับแล้ว'); return; }
+      else { c.xpc.push({ label: code, name: f.item.name }); msg = 'เจอเพิ่ม ' + f.item.name + ' ไม่อยู่ในรายการของที่นี่'; beep(false); }
+    } else if (f) {
+      if (f.item.per === 'ต่อชิ้น' && !picked) { beep(false); toast('ของนี้ต้องสแกนป้ายประจำชิ้น'); return; }
+      var row = c.types.filter(function (x) { return x.code === f.item.code; })[0];
+      if (!row) { row = { code: f.item.code, name: f.item.name, unit: f.item.unit, cat: f.item.cat, q: '', x: 1 }; c.types.push(row); }
+      save(); renderCnt();
+      var inp = document.querySelector('#ct-' + CSS.escape(row.code) + ' input');
+      if (inp) { inp.scrollIntoView({ block: 'center' }); inp.focus(); }
+      beep(true); toast('ใส่จำนวน ' + row.name + ' ที่นับได้');
+      return;
+    } else {
+      var a = c.ac.filter(function (x) { return x.code === code; })[0];
+      if (a) { if (a.f) { beep(false); toast('กล่องนี้นับแล้ว'); return; } a.f = 1; msg = 'เจอ ' + a.label + ' ' + a.type; beep(true); }
+      else if (c.xac.indexOf(code) >= 0) { beep(false); toast('กล่องนี้นับแล้ว'); return; }
+      else { c.xac.push(code); msg = 'เจอเพิ่ม ไม่อยู่ในรายการของที่นี่'; beep(false); }
+    }
+    save(); renderCnt();
+    showResult(/เพิ่ม/.test(msg) ? 'warn' : 'ok', msg, code, '');
+  }
+  function cntSubmit() {
+    var c = st.cnt, blank = c.types.filter(function (x) { return x.q === ''; }).length, miss = c.ac.filter(function (x) { return !x.f; }).length + c.pieces.filter(function (x) { return !x.f; }).length;
+    openSheet('<h3>ส่งผลนับ ' + esc(c.loc) + '</h3><div class="hint">' + (blank ? 'อุปกรณ์ที่ยังไม่ใส่จำนวน ' + blank + ' รายการ จะนับเป็น 0<br>' : '') + (miss ? 'แอร์และอุปกรณ์ต่อชิ้นที่ยังไม่เจอ ' + miss + ' รายการ จะขึ้นเป็นขาด<br>' : '') + 'ส่งแล้วแก้ไม่ได้ ถ้านับผิดให้นับรอบใหม่</div><button class="btn primary" type="button" data-x="yes">ส่งผลนับ</button><button class="btn ghost" type="button" data-x="">นับต่อ</button>', function (x) {
+      if (x !== 'yes') return;
+      var items = {};
+      c.types.forEach(function (t) { if (t.q !== '') items[t.code] = Number(t.q); });
+      run('countSubmit', { pin: st.pin, loc: c.loc, name: st.name, startedAt: c.at, ac: c.ac.filter(function (a) { return a.f; }).map(function (a) { return a.code; }).concat(c.xac), pieces: c.pieces.filter(function (a) { return a.f; }).map(function (a) { return a.label; }).concat(c.xpc.map(function (a) { return a.label; })), items: items }).then(function (r) {
+        if (!r.ok) { toast(r.msg); return; }
+        c.report = r.report; save(); renderCnt(); renderNow(); $('cntCard').scrollIntoView({ block: 'start' });
+      }).catch(function (e) { toast(String(e)); });
+    });
+  }
+  function renderReport(el, r, canApply) {
+    var bad = r.lines.filter(function (l) { return l.diff; });
+    var h = '<h2>รายงานตรวจนับ ' + esc(r.loc) + '</h2><div class="hint">รอบ ' + esc(r.id) + ' นับโดย ' + esc(r.by) + ' ส่งเมื่อ ' + esc(r.at) + '</div>' +
+      '<div class="tiles"><div class="tile"><b>' + r.same + '</b><span>ตรงกัน</span></div><div class="tile"><b style="color:var(--bad)">' + r.short + '</b><span>ขาด</span></div><div class="tile"><b style="color:var(--warn)">' + r.over + '</b><span>เกิน</span></div></div>' +
+      (r.vShort != null ? '<div class="hint">มูลค่าขาด ฿' + Math.round(-r.vShort).toLocaleString('th-TH') + ' มูลค่าเกิน ฿' + Math.round(r.vOver).toLocaleString('th-TH') + '</div>' : '') +
+      '<div class="cnt-sec">' + (bad.map(function (l) {
+        return '<div class="cnt-row"><span class="pill ' + (l.diff < 0 ? 'bad' : 'warn') + '">' + (l.diff < 0 ? 'ขาด' : 'เกิน') + '</span><div class="nm">' + esc(l.name) + '<small>' + esc(l.code + ' ' + l.kind + (l.note ? ' ' + l.note : '')) + '</small></div><div style="text-align:right;font-size:13px">ระบบ ' + l.exp + '<br>นับได้ ' + l.got + '<br><b>' + (l.diff > 0 ? '+' : '') + l.diff + ' ' + esc(l.unit || '') + '</b></div></div>';
+      }).join('') || '<div class="hint">ตรงกับในระบบทุกรายการ</div>') + '</div>' +
+      '<div class="hint">สถานะ ' + esc(r.status) + (r.adjBy ? ' โดย ' + esc(r.adjBy) + ' ' + esc(r.adjAt) : '') + '</div>';
+    if (canApply && r.status === 'รอตรวจ') {
+      h += (NEEDCUT ? '<label>รหัสตัดสต๊อก<input id="apPin" type="password" inputmode="numeric" autocomplete="off" value="' + esc(st.cutPin || '') + '"></label>' : '') +
+        '<button class="btn navy" type="button" id="cntApply">ปรับยอดตามที่นับ</button><div class="hint">ปรับอุปกรณ์ตามที่นับ แอร์ที่เจอเพิ่มจากคลังอื่นจะย้ายมาที่นี่ แอร์ที่ไม่เจอ ระบบไม่ตัดให้ ตามหาก่อนแล้วค่อยตัดออก</div>';
+    }
+    if (canApply) h += '<button class="btn ghost" type="button" id="cntNew">นับรอบใหม่</button>';
+    el.innerHTML = h;
+    if ($('cntApply')) $('cntApply').onclick = function () {
+      if ($('apPin')) { st.cutPin = $('apPin').value.trim(); save(); }
+      $('cntApply').disabled = true;
+      run('countApply', { pin: st.pin, cutPin: st.cutPin, id: r.id, name: st.name }).then(function (x) {
+        if (!x.ok) { toast(x.msg); $('cntApply').disabled = false; return; }
+        toast('ปรับยอดแล้ว ' + x.done + ' รายการ' + (x.skipped ? ' ข้าม ' + x.skipped : ''));
+        st.cnt.report = x.report; save(); renderCnt();
+      }).catch(function (e) { toast(String(e)); $('cntApply').disabled = false; });
+    };
+    if ($('cntNew')) $('cntNew').onclick = function () { st.cnt = null; save(); renderCnt(); renderNow(); };
+  }
+
+  // ---------- เลือกรุ่น ----------
+  function renderPick() {
+    var sets = [];
+    MODELS.forEach(function (m) { if (sets.indexOf(m.set) < 0) sets.push(m.set); });
+    var brands = [];
+    sets.forEach(function (s) { var b = MODELS.filter(function (m) { return m.set === s; })[0].brand || 'อื่น ๆ'; if (brands.indexOf(b) < 0) brands.push(b); });
+    $('sets').innerHTML = brands.map(function (br) {
+      return '<h4 data-b="' + esc(br) + '">' + esc(br) + '</h4>' + sets.filter(function (s) { return (MODELS.filter(function (m) { return m.set === s; })[0].brand || 'อื่น ๆ') === br; }).map(function (s) {
+        var ms = MODELS.filter(function (m) { return m.set === s; }), f = ms[0];
+        var key = (f.brand + ' ' + (f.label || '') + ' ' + s + ' ' + (f.btu || '')).toLowerCase().replace(/,/g, '');
+        return '<div class="set" data-b="' + esc(br) + '" data-n="' + esc(key) + '"><div><b>' + esc(f.label || s) + '</b><small>' + esc(s + (f.btu ? ' ' + f.btu + ' BTU' : '')) + '</small></div>' +
+          ms.map(function (m) { return '<button type="button" class="chip' + (st.model === m.model ? ' on' : '') + '" data-m="' + esc(m.model) + '">' + typeShort(m.type) + '</button>'; }).join('') + '</div>';
+      }).join('');
+    }).join('') || '<div class="hint">ยังไม่มีรุ่นในชีท รุ่นแอร์</div>';
+    filterSets();
+    $('pickCard').classList.toggle('hide', !!st.model && !st.picking);
+  }
+  function filterSets() {
+    var words = $('modelQ').value.trim().toLowerCase().replace(/,/g, '').split(/\s+/).filter(Boolean), shown = {};
+    $('sets').querySelectorAll('.set').forEach(function (d) { var n = d.getAttribute('data-n'), ok = words.every(function (w) { return n.indexOf(w) >= 0; }); d.classList.toggle('hide', !ok); if (ok) shown[d.getAttribute('data-b')] = 1; });
+    $('sets').querySelectorAll('h4').forEach(function (h) { h.classList.toggle('hide', !shown[h.getAttribute('data-b')]); });
+  }
+  $('modelQ').oninput = filterSets;
+  $('sets').onclick = function (e) {
+    var b = e.target.closest('[data-m]'); if (!b) return;
+    st.model = b.getAttribute('data-m'); st.picking = false; save(); renderPick(); renderNow();
+    toast('สแกนรุ่น ' + nowText());
+  };
+  $('pickBtn').onclick = function () { st.picking = true; save(); $('pickCard').classList.remove('hide'); $('pickCard').scrollIntoView({ behavior: 'smooth', block: 'start' }); };
+  $('auto').onchange = function () { st.auto = $('auto').checked; save(); };
+  function nowText() { var m = modelOf(st.model); return m ? (m.label || m.set) + ' ' + m.type : ''; }
+  function renderNow() {
+    if (CNT()) {
+      $('nowBox').querySelector('.small').textContent = 'ตรวจนับ';
+      $('nowModel').textContent = st.cnt ? st.cnt.loc : 'ยังไม่เริ่มนับ';
+      $('nowModelFull').textContent = st.cnt ? (st.cnt.report ? 'ส่งผลแล้ว ดูรายงานด้านล่าง' : 'สแกนทุกกล่องและทุกป้ายที่เห็น ใส่จำนวนของที่นับเป็นจำนวน') : 'เลือกคลังหรือรถ แล้วกดเริ่มนับ';
+      return;
+    }
+    if (OUT()) {
+      $('nowBox').querySelector('.small').textContent = 'กำลังตัดออก';
+      $('nowModel').textContent = st.why ? cutText() : 'ยังไม่เลือกเหตุผล';
+      $('nowModelFull').textContent = 'จาก ' + st.loc;
+      return;
+    }
+    if (MOTO()) {
+      $('nowBox').querySelector('.small').textContent = 'มอเตอร์ไซค์';
+      $('nowModel').textContent = 'รับเข้าได้แค่อุปกรณ์';
+      $('nowModelFull').textContent = 'สแกนป้ายอุปกรณ์ได้เลย แอร์ไม่รับ';
+      $('pickBtn').classList.add('hide');
+      return;
+    }
+    $('nowBox').querySelector('.small').textContent = 'กำลังสแกนรุ่น';
+    var m = modelOf(st.model);
+    $('nowModel').textContent = m ? (m.label || m.set) + ' ' + m.type : 'ยังไม่เลือกรุ่น';
+    $('nowModelFull').textContent = m ? m.brand + ' ' + m.model : 'กดเลือกรุ่นด้านล่างก่อนสแกน';
+  }
+
+  // ---------- สแกน ----------
+  function onCode(text, fromTyped) {
+    var code = String(text || '').replace(/\s+/g, '').toUpperCase();
+    if (!code) return;
+    var now = Date.now();
+    if (!fromTyped && code === last && now - lastAt < 4000) return;
+    last = code; lastAt = now;
+    if (busy) return;
+    if (CNT()) { countScan(code); return; }
+    var fi = itemOf(code);
+    if (fi) { handleItem(fi); return; }
+    if (OUT()) {
+      var why = cutReady();
+      if (why) { beep(false); showResult('warn', why, code, 'ตั้งค่าในกล่องด้านบนแล้วสแกนใหม่'); return; }
+      if (/^\d{8,14}$/.test(code)) { askProductCode(code); return; }
+      cutSubmit(code, false); return;
+    }
+    if (st.auto) {
+      var hit = MODELS.filter(function (m) { return m.key && code.indexOf(m.key) >= 0; })[0];
+      if (hit && hit.model !== st.model) { st.model = hit.model; save(); renderNow(); renderPick(); }
+    }
+    if (MOTO()) { beep(false); showResult('bad', 'มอเตอร์ไซค์รับได้แค่อุปกรณ์', code, 'แอร์ต้องสแกนเข้าคลังหรือรถทีม ถ้าเป็นป้ายอุปกรณ์ ตรวจว่ารหัสถูกต้อง'); return; }
+    if (!modelOf(st.model)) { beep(false); showResult('warn', 'เลือกรุ่นก่อนสแกน', code, 'กดเลือกรุ่นที่ตรงกับกล่อง แล้วสแกนใหม่'); $('pickCard').classList.remove('hide'); return; }
+    if (/^\d{8,14}$/.test(code)) { askProductCode(code); return; }
+    submit(code, false);
+  }
+  function submit(code, move, back) {
+    busy = true;
+    showResult('warn', 'กำลังบันทึก', code, nowText());
+    run('saveScan', { pin: st.pin, code: code, model: st.model, loc: st.loc, name: st.name, move: move, back: back, bill: st.bill || '' }).then(function (r) {
+      busy = false;
+      if (r.ok) {
+        beep(true);
+        var c = (r.counts.list.filter(function (o) { return o.set === modelOf(r.model).set; })[0]) || {};
+        showResult('ok', r.moved ? 'ย้ายมาคลังนี้แล้ว' : r.back ? 'รับคืนเข้าคลังแล้ว' : 'บันทึกแล้ว', r.code, (modelOf(r.model).label || r.model) + ' ' + r.type + ' ตอนนี้ เย็น ' + (c.inn || 0) + ' ร้อน ' + (c.out || 0) + ' ครบชุด ' + (c.sets || 0));
+        renderCounts(r.counts); loadMine(); if (st.bill) loadBill();
+      } else if (r.dup) {
+        beep(false);
+        var d = 'สแกนเมื่อ ' + r.when + ' โดย ' + r.by + ' ที่ ' + r.loc + ' รุ่น ' + r.model;
+        showResult('bad', r.sameLoc ? 'กล่องนี้นับไปแล้ว' : 'เลขนี้นับไว้ที่คลังอื่น', code, d, r.sameLoc ? '' : '<button class="btn small navy" type="button" id="moveBtn">ย้ายมาคลังนี้</button>');
+        if (!r.sameLoc) $('moveBtn').onclick = function () { submit(code, true); };
+      } else if (r.wasOut) {
+        beep(false);
+        showResult('bad', 'กล่องนี้ตัดออกไปแล้ว', code, 'เมื่อ ' + r.when + ' โดย ' + r.by + ' เพราะ ' + r.why + (r.ref ? ' ' + r.ref : '') + ' ถ้าของกลับมาจริง กดรับคืน', '<button class="btn small navy" type="button" id="backBtn">รับคืนเข้าคลังนี้</button>');
+        $('backBtn').onclick = function () { submit(code, false, true); };
+      } else {
+        beep(false); showResult('bad', 'ยังไม่ได้บันทึก', code, r.msg || '');
+      }
+    }).catch(function (e) { busy = false; beep(false); showResult('bad', 'ยังไม่ได้บันทึก', code, e + ' ลองใหม่อีกครั้ง'); });
+  }
+  function askProductCode(code) {
+    openSheet('<h3>บาร์โค้ดนี้น่าจะเป็นรหัสสินค้า</h3><div class="hint">เลข ' + esc(code) + ' เป็นตัวเลขล้วน มักเป็นรหัสสินค้าที่เหมือนกันทุกกล่อง ให้สแกนสติกเกอร์เลขเครื่อง (Serial) แทน</div>' +
+      '<button class="btn primary" type="button" data-x="no">ไม่บันทึก สแกนใหม่</button><button class="btn ghost" type="button" data-x="yes">บันทึกเลขนี้ต่อ</button>', function (x) { if (x === 'yes') { if (OUT()) cutSubmit(code, false); else submit(code, false); } });
+  }
+  function showResult(kind, title, code, detail, extra) {
+    var el = $('result');
+    el.className = 'result ' + kind;
+    el.innerHTML = '<div class="t">' + esc(title) + '</div><div class="code">' + esc(code) + '</div>' + (detail ? '<div class="d">' + esc(detail) + '</div>' : '') + (extra || '');
+  }
+
+  // ---------- กล้อง ----------
+  // อ่านภาพจากกล้องที่ความละเอียดเต็ม ตัดเฉพาะแถบกลางจอ แล้วถอดรหัส
+  // ใช้ตัวอ่านบาร์โค้ดของเครื่องถ้ามี (Android Chrome) ไม่มีก็ใช้ ZXing (iPhone)
+  var stream = null, timer = null, native = null, zx = null, torch = false;
+  var work = document.createElement('canvas');
+  if ('BarcodeDetector' in window) {
+    try {
+      BarcodeDetector.getSupportedFormats().then(function (f) {
+        var want = ['code_128', 'code_39', 'code_93', 'ean_13', 'itf', 'qr_code', 'data_matrix'].filter(function (x) { return f.indexOf(x) >= 0; });
+        if (want.indexOf('code_128') >= 0) native = new BarcodeDetector({ formats: want });
+      }).catch(function () {});
+    } catch (e) {}
+  }
+  function zxReader() {
+    if (zx || !window.ZXing) return zx;
+    var Z = window.ZXing, hints = new Map();
+    hints.set(Z.DecodeHintType.POSSIBLE_FORMATS, [Z.BarcodeFormat.CODE_128, Z.BarcodeFormat.CODE_39, Z.BarcodeFormat.CODE_93, Z.BarcodeFormat.EAN_13, Z.BarcodeFormat.ITF, Z.BarcodeFormat.QR_CODE, Z.BarcodeFormat.DATA_MATRIX]);
+    hints.set(Z.DecodeHintType.TRY_HARDER, true);
+    zx = new Z.MultiFormatReader(); zx.setHints(hints);
+    return zx;
+  }
+  function zxDecode(c) {
+    var r = zxReader(); if (!r) return null;
+    var Z = window.ZXing, src = new Z.HTMLCanvasElementLuminanceSource(c);
+    var bins = [new Z.HybridBinarizer(src), new Z.GlobalHistogramBinarizer(src)];
+    for (var i = 0; i < bins.length; i++) {
+      try { var t = r.decode(new Z.BinaryBitmap(bins[i])).getText(); r.reset(); if (t) return t; } catch (e) { r.reset(); }
+    }
+    return null;
+  }
+  function decodeCanvas(c) {
+    if (native) return native.detect(c).then(function (a) { return a && a.length ? a[0].rawValue : zxDecode(c); }).catch(function () { return zxDecode(c); });
+    return Promise.resolve(zxDecode(c));
+  }
+  function grab(v) {
+    var W = v.videoWidth, H = v.videoHeight; if (!W || !H) return null;
+    // แถบกลางจอ ตรงกับกรอบสีเหลือง (กว้าง 88% สูง 26% ของภาพที่เห็น)
+    var box = v.getBoundingClientRect(), scale = Math.max(box.width / W, box.height / H);
+    var visW = box.width / scale, visH = box.height / scale;
+    var sx = (W - visW) / 2 + visW * 0.04, sw = visW * 0.92, sh = visH * 0.34, sy = (H - sh) / 2;
+    var k = Math.min(1, 1600 / sw);
+    work.width = Math.round(sw * k); work.height = Math.round(sh * k);
+    work.getContext('2d', { willReadFrequently: true }).drawImage(v, sx, sy, sw, sh, 0, 0, work.width, work.height);
+    return work;
+  }
+  function tick() {
+    if (!stream) return;
+    var c = grab($('video'));
+    if (!c || busy) { timer = setTimeout(tick, 150); return; }
+    decodeCanvas(c).then(function (t) {
+      if (t) { $('reader').classList.add('found'); setTimeout(function () { $('reader').classList.remove('found'); }, 400); onCode(t, false); }
+      timer = setTimeout(tick, t ? 600 : 120);
+    });
+  }
+  function startCam() {
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) { toast('เครื่องนี้เปิดกล้องในหน้าเว็บไม่ได้ ใช้ถ่ายรูปหรือพิมพ์เลขแทน'); return; }
+    if (!native && !window.ZXing) { toast('โหลดตัวอ่านบาร์โค้ดไม่ได้ ใช้พิมพ์เลขแทน'); return; }
+    navigator.mediaDevices.getUserMedia({ audio: false, video: { facingMode: { ideal: 'environment' }, width: { ideal: 1920 }, height: { ideal: 1080 } } }).then(function (s) {
+      stream = s; var v = $('video'); v.srcObject = s; v.play();
+      $('reader').classList.remove('hide'); camOn = true; $('camBtn').textContent = 'ปิดกล้อง';
+      var tr = s.getVideoTracks()[0], cap = tr.getCapabilities ? tr.getCapabilities() : {};
+      if (cap.focusMode && cap.focusMode.indexOf('continuous') >= 0) tr.applyConstraints({ advanced: [{ focusMode: 'continuous' }] }).catch(function () {});
+      $('torchBtn').classList.toggle('hide', !cap.torch);
+      tick();
+    }).catch(function () { LIVE_OK = false; $('camBtn').classList.add('hide'); $('photoBtn').classList.add('navy'); toast('เปิดกล้องสดไม่ได้ ใช้ปุ่มถ่ายรูปบาร์โค้ดแทน'); });
+  }
+  function stopCam() {
+    clearTimeout(timer);
+    if (stream) stream.getTracks().forEach(function (t) { t.stop(); });
+    stream = null; camOn = false; torch = false;
+    $('reader').classList.add('hide'); $('torchBtn').classList.add('hide'); $('torchBtn').textContent = 'เปิดไฟฉาย';
+    $('camBtn').textContent = 'เปิดกล้องสแกน';
+  }
+  $('camBtn').onclick = function () { if (camOn) stopCam(); else startCam(); };
+  $('torchBtn').onclick = function () {
+    if (!stream) return; torch = !torch;
+    stream.getVideoTracks()[0].applyConstraints({ advanced: [{ torch: torch }] }).catch(function () {});
+    $('torchBtn').textContent = torch ? 'ปิดไฟฉาย' : 'เปิดไฟฉาย';
+  };
+  document.addEventListener('visibilitychange', function () { if (document.hidden) stopCam(); });
+  $('photoBtn').onclick = function () { $('photo').value = ''; $('photo').click(); };
+  $('photo').onchange = function () {
+    var f = $('photo').files[0]; if (!f) return;
+    if (camOn) stopCam();
+    toast('กำลังอ่านรูป');
+    var img = new Image(), url = URL.createObjectURL(f);
+    img.onload = function () {
+      URL.revokeObjectURL(url);
+      var tries = [], W = img.naturalWidth, H = img.naturalHeight;
+      // ลองทั้งรูป แล้วลองแถบกลาง แล้วลองหมุนรูป
+      tries.push([0, 0, W, H, 0]); tries.push([0, H * 0.3, W, H * 0.4, 0]); tries.push([0, 0, W, H, 90]);
+      (function next(i) {
+        if (i >= tries.length) { beep(false); toast('อ่านบาร์โค้ดในรูปไม่ได้ ถ่ายให้ใกล้ ตรง และชัดขึ้น'); return; }
+        var t = tries[i], k = Math.min(1, 2000 / Math.max(t[2], t[3])), c = document.createElement('canvas'), g = c.getContext('2d');
+        var w = Math.round(t[2] * k), h = Math.round(t[3] * k);
+        if (t[4]) { c.width = h; c.height = w; g.translate(h, 0); g.rotate(Math.PI / 2); } else { c.width = w; c.height = h; }
+        g.drawImage(img, t[0], t[1], t[2], t[3], 0, 0, w, h);
+        decodeCanvas(c).then(function (txt) { if (txt) onCode(txt, true); else next(i + 1); });
+      })(0);
+    };
+    img.onerror = function () { toast('เปิดรูปไม่ได้'); };
+    img.src = url;
+  };
+  $('typeForm').onsubmit = function (e) { e.preventDefault(); var v = $('typed').value; $('typed').value = ''; onCode(v, true); };
+
+  // ---------- ยอด ----------
+  function renderCounts(c) {
+    var rows = c.list.map(function (o) {
+      return '<tr><td>' + esc(setLabel(o.set)) + '</td><td' + (o.inn < o.out ? '' : o.gap ? ' class="gap"' : '') + '>' + o.inn + '</td><td' + (o.out < o.inn ? '' : o.gap ? ' class="gap"' : '') + '>' + o.out + '</td><td>' + o.sets + '</td></tr>';
+    });
+    var t = c.list.reduce(function (a, o) { a.i += o.inn; a.o += o.out; a.s += o.sets; return a; }, { i: 0, o: 0, s: 0 });
+    $('counts').innerHTML = rows.join('') + '<tr class="total"><td>รวม</td><td>' + t.i + '</td><td>' + t.o + '</td><td>' + t.s + '</td></tr>';
+  }
+  function loadMine() {
+    run('getCounts', { pin: st.pin, loc: st.loc, name: st.name }).then(function (r) {
+      renderCounts(r.counts);
+      renderItems(r.items);
+      var list = OUT() ? (r.mineOut || []) : r.mine, il = OUT() ? (r.itemOut || []) : (r.itemIn || []);
+      $('mine').innerHTML = list.map(function (x) {
+        var m = modelOf(x.model), sub = x.at + ' ' + ((m && m.label) || x.model) + ' ' + x.type + (OUT() ? ' ' + x.why + (x.ref ? ' ' + x.ref : '') : '');
+        return '<div class="item"><div><div class="c">' + esc(x.code) + '</div><div class="m">' + esc(sub) + '</div></div><button class="btn small ghost" type="button" data-cancel="' + esc(x.id) + '">ยกเลิก</button></div>';
+      }).join('') + il.map(function (x) {
+        var sub = x.at + ' ' + x.name + ' ' + fmtQ(x.qty) + ' ' + x.unit + (OUT() ? ' ' + x.why + (x.ref ? ' ' + x.ref : '') : '');
+        return '<div class="item"><div><div class="c">' + esc(x.label) + '</div><div class="m">' + esc(sub) + '</div></div><button class="btn small ghost" type="button" data-icancel="' + esc(x.id) + '">ยกเลิก</button></div>';
+      }).join('') || '<div class="hint">ยังไม่มี</div>';
+    }).catch(function (e) { toast('โหลดยอดไม่ได้: ' + e); });
+  }
+  function refresh() { loadMine(); }
+
+  // ---------- รับของตามบิล (ไม่บังคับ) ----------
+  var BILL = null;
+  function billLeft(code) {
+    if (!BILL || !BILL.found) return 0;
+    var l = BILL.lines.filter(function (x) { return !x.ac && x.code === code; })[0];
+    return l && l.left > 0 ? l.left : 0;
+  }
+  function loadBill() {
+    $('bill').value = st.bill || '';
+    if (!st.bill) { BILL = null; $('billBox').innerHTML = '<div class="hint">ถ้ามีบิลจากผู้ขาย ใส่เลขบิลก่อนสแกน แอปจะเทียบจำนวนกับบิลให้ ถ้าไม่มีก็สแกนได้ตามปกติ</div>'; return; }
+    var want = st.bill;
+    run('billCheck', { pin: st.pin, bill: want }).then(function (r) { if (r.ok && want === st.bill) { BILL = r; renderBill(r); } })
+      .catch(function (e) { $('billBox').innerHTML = '<div class="hint">ตรวจบิลไม่ได้: ' + esc(String(e)) + '</div>'; });
+  }
+  function renderBill(r) {
+    var h = '<div class="hint">ของที่สแกนรับเข้าจะบันทึกเลขบิล ' + esc(r.bill) + ' ไว้ด้วย <a href="#" id="billOff">ไม่ใช้บิล</a></div>';
+    if (!r.found) h += '<div class="hint" style="color:var(--warn)">ไม่พบบิลนี้ในแท็บบิลรับสินค้า ยังสแกนได้ตามปกติ</div>';
+    else h += '<div style="margin:6px 0"><b>' + esc(r.vendor) + '</b> <span class="hint">' + esc(r.date) + '</span><div>ได้แล้ว ' + fmtQ(r.got) + ' จาก ' + fmtQ(r.want) + (r.extra ? ' มีของไม่ตรงบิล ' + r.extra + ' รายการ' : '') + '</div></div>';
+    h += r.lines.map(function (l) {
+      var pill = !l.inBill ? '<span class="pill warn">ไม่มีในบิล</span>' : l.got > l.want ? '<span class="pill warn">เกิน ' + fmtQ(l.got - l.want) + '</span>' : l.left > 0 ? '<span class="pill no">ขาด ' + fmtQ(l.left) + '</span>' : '<span class="pill ok">ครบ</span>';
+      var cls = !l.inBill || l.got > l.want ? ' extra' : l.left <= 0 ? ' found' : '';
+      return '<div class="cnt-row' + cls + '"><div class="nm">' + esc(l.name + (l.type ? ' ' + l.type : '')) + '<small>' + esc(l.code) + '</small></div><span class="u" style="width:auto">' + fmtQ(l.got) + '/' + fmtQ(l.want) + '</span>' + pill + '</div>';
+    }).join('');
+    $('billBox').innerHTML = h;
+    $('billOff').onclick = function (e) { e.preventDefault(); st.bill = ''; save(); loadBill(); };
+  }
+  $('billForm').onsubmit = function (e) {
+    e.preventDefault();
+    st.bill = $('bill').value.replace(/\s+/g, '').toUpperCase(); save(); loadBill();
+  };
+  $('mine').onclick = function (e) {
+    var ib = e.target.closest('[data-icancel]');
+    if (ib) {
+      var iid = ib.getAttribute('data-icancel');
+      openSheet('<h3>ยกเลิกรายการอุปกรณ์</h3><div class="hint">ยอดจะกลับเป็นเหมือนก่อนสแกน</div><button class="btn" type="button" data-x="ใส่จำนวนผิด">ใส่จำนวนผิด</button><button class="btn" type="button" data-x="สแกนผิดของ">สแกนผิดของ</button><button class="btn ghost" type="button" data-x="">ไม่ยกเลิก</button>', function (why) {
+        if (!why) return;
+        run('cancelItem', { pin: st.pin, cutPin: st.cutPin, id: iid, reason: why, name: st.name, loc: st.loc }).then(function (r) {
+          if (r.ok) { toast('ยกเลิกแล้ว'); renderItems(r.items); loadMine(); } else toast(r.msg);
+        }).catch(function (e) { toast(String(e)); });
+      });
+      return;
+    }
+    var b = e.target.closest('[data-cancel]'); if (!b) return;
+    var id = b.getAttribute('data-cancel');
+    var reasons = OUT() ? ['ตัดผิดกล่อง', 'ของยังไม่ได้ออกจริง', 'เลือกเหตุผลผิด'] : ['สแกนผิดรุ่น', 'สแกนผิดกล่อง', 'ของไม่ได้อยู่ในคลังนี้'];
+    openSheet('<h3>' + (OUT() ? 'ยกเลิกการตัดออก' : 'ยกเลิกรายการนี้') + '</h3><div class="hint">' + (OUT() ? 'กล่องจะกลับมานับในคลังเดิม' : 'รายการยังเก็บไว้ในชีท แต่ไม่นับยอด') + '</div>' +
+      reasons.map(function (r) { return '<button class="btn" type="button" data-x="' + r + '">' + r + '</button>'; }).join('') +
+      '<button class="btn ghost" type="button" data-x="">ไม่ยกเลิก</button>', function (why) {
+        if (!why) return;
+        run('cancelScan', { pin: st.pin, cutPin: OUT() ? st.cutPin : null, id: id, reason: why, name: st.name, loc: st.loc }).then(function (r) {
+          if (r.ok) { toast('ยกเลิกแล้ว'); renderCounts(r.counts); loadMine(); } else toast(r.msg);
+        }).catch(function (e) { toast(String(e)); });
+      });
+  };
+
+  // ---------- หน้าดูยอดอย่างเดียว ----------
+  var viewTimer = null;
+  function showView(fromApp) {
+    stopCam();
+    ['screenStart', 'screenMain', 'screenLabels'].forEach(function (k) { $(k).classList.add('hide'); });
+    $('screenView').classList.remove('hide');
+    $('viewBack').classList.toggle('hide', !fromApp);
+    $('appTitle').textContent = 'ยอดแอร์ในคลัง';
+    $('whoBtn').innerHTML = fromApp ? esc(st.name) + '<span>' + esc(st.loc) + '</span>' : 'ดูอย่างเดียว';
+    loadView();
+    clearInterval(viewTimer); viewTimer = setInterval(function () { if (!document.hidden && !$('screenView').classList.contains('hide')) loadView(true); }, 60000);
+  }
+  function viewPin() { return st.viewPin || st.pin || ''; }
+  function loadView(quiet, q) {
+    if (!quiet) $('viewAt').textContent = 'กำลังโหลด';
+    run('getView', { pin: viewPin(), q: q || '', ownerPin: st.ownerPin || '' }).then(function (r) {
+      $('viewPinCard').classList.add('hide');
+      renderView(r, q);
+    }).catch(function (e) {
+      if (/รหัส/.test(String(e))) { $('viewPinCard').classList.remove('hide'); $('viewMsg').textContent = st.viewPin ? 'รหัสไม่ถูกต้อง' : ''; $('viewBody').innerHTML = ''; $('viewAt').textContent = 'ดูอย่างเดียว แก้ไขไม่ได้'; }
+      else $('viewAt').textContent = 'โหลดไม่ได้: ' + e;
+    });
+  }
+  $('viewPinBtn').onclick = function () { st.viewPin = $('viewPin').value.trim(); save(); loadView(); };
+  $('viewRefresh').onclick = function () { loadView(); };
+  $('viewBack').onclick = function () { clearInterval(viewTimer); $('appTitle').textContent = 'สแกนแอร์ RCA'; showMain(); };
+  $('toView').onclick = function () { showView(true); };
+  function lab(r, set) { return (r.labels && r.labels[set]) || set; }
+  function tbl(r, list, total) {
+    var t = list.reduce(function (a, o) { a.i += o.inn; a.o += o.out; a.s += o.sets; return a; }, { i: 0, o: 0, s: 0 });
+    return '<table><thead><tr><th>รุ่น</th><th>เย็น</th><th>ร้อน</th><th>ครบชุด</th></tr></thead><tbody>' +
+      list.map(function (o) { return '<tr><td>' + esc(lab(r, o.set)) + ' <small class="hint">' + esc(o.brand) + '</small></td><td' + (o.gap && o.inn > o.out ? ' class="gap"' : '') + '>' + o.inn + '</td><td' + (o.gap && o.out > o.inn ? ' class="gap"' : '') + '>' + o.out + '</td><td>' + o.sets + '</td></tr>'; }).join('') +
+      '<tr class="total"><td>รวม</td><td>' + t.i + '</td><td>' + t.o + '</td><td>' + t.s + '</td></tr></tbody></table>';
+  }
+  // ---------- หน้าภาพรวมสต็อก (ดูอย่างเดียว) ----------
+  var VS = st.vs || {};
+  ['f', 'tab', 'q', 'brand', 'type', 'sel'].forEach(function (k) { if (VS[k] == null) VS[k] = { f: 'ALL', tab: 'ac' }[k] || ''; });
+  if (VS.hasAc == null) VS.hasAc = false;
+  if (VS.hasIt == null) VS.hasIt = true;
+  var VIEW_R = null;
+  function vsave() { st.vs = VS; save(); }
+  function baht(n) { return '฿' + Math.round(n || 0).toLocaleString('th-TH'); }
+  function shortLoc(n) { var m = String(n).match(/^คลัง\s*(BR\d{3})/i); return m ? 'คลัง ' + m[1].toUpperCase() : String(n).replace(/^(รถทีม|มอเตอร์ไซค์)\s*/, ''); }
+  var AC_TYPES = ['ติดผนัง', 'สี่ทิศทาง', 'แขวน', 'ฝังฝ้า', 'ท่อลม', 'ตั้งพื้น', 'มัลติ', 'VRV'];
+  function acType(label) { label = String(label || ''); for (var i = 0; i < AC_TYPES.length; i++) if (label.indexOf(AC_TYPES[i]) >= 0) return AC_TYPES[i]; return /cassette/i.test(label) ? 'สี่ทิศทาง' : /ceil/i.test(label) ? 'แขวน' : /wall/i.test(label) ? 'ติดผนัง' : 'อื่น ๆ'; }
+  function vLocs() { return VIEW_R && VIEW_R.stock ? VIEW_R.stock.locs : []; }
+  function inScope(l) {
+    if (VS.f === 'ALL') return true;
+    if (VS.f.indexOf('B:') === 0) { var b = VS.f.slice(2); return b === 'NONE' ? !l.br : l.br === b; }
+    return l.name === VS.f.slice(2);
+  }
+  function scopeName() {
+    if (VS.f === 'ALL') return 'ทุกสาขา';
+    var S = VIEW_R.stock;
+    if (VS.f.indexOf('B:') === 0) { var b = VS.f.slice(2), x = S.branches.filter(function (y) { return y.id === b; })[0]; return b === 'NONE' ? 'รถที่ยังไม่ระบุสาขา' : b + ' ' + (x ? x.name : '') + ' ทั้งสาขา'; }
+    return VS.f.slice(2);
+  }
+  function acSum(by, test) { var i = 0, o = 0, one = 0; vLocs().forEach(function (l) { var p = by[l.name]; if (p && test(l)) { i += p[0]; o += p[1]; one += p[2]; } }); return { i: i, o: o, one: one, s: Math.min(i, o) + one, g: Math.abs(i - o), n: i + o + one }; }
+  function itSum(by, test) { var q = 0; vLocs().forEach(function (l) { if (by[l.name] && test(l)) q += by[l.name]; }); return Math.round(q * 1000) / 1000; }
+  function isLow(it, l, q) { return !l.van && it.min != null && it.min > 0 && q < it.min; }
+  // คอลัมน์ของตาราง: ทุกสาขา = สาขา · ทั้งสาขา = คลังและรถในสาขา · คลังเดียว = ไม่มี (ใช้ เย็น ร้อน)
+  function vCols(tab) {
+    var S = VIEW_R.stock, ac = tab === 'ac';
+    if (VS.f === 'ALL') {
+      var cols = S.branches.map(function (b) { return { label: b.id, title: b.id + ' ' + b.name + ' รวมรถในสาขา', test: function (l) { return l.br === b.id; } }; });
+      if (vLocs().some(function (l) { return !l.br; })) cols.push({ label: 'ไม่ระบุ', title: 'รถที่ยังไม่ระบุสาขา', test: function (l) { return !l.br; } });
+      return cols;
+    }
+    if (VS.f.indexOf('B:') === 0) {
+      var has = function (l) {
+        if (!l.van) return true;
+        if (ac) return !l.moto && S.ac.some(function (c) { var p = c.by[l.name]; return p && p[0] + p[1] + p[2]; });
+        return S.items.some(function (it) { return it.by[l.name]; });
+      };
+      return vLocs().filter(function (l) { return inScope(l) && has(l); })
+        .sort(function (x, y) { return (x.van - y.van) || (x.name < y.name ? -1 : 1); })
+        .map(function (l) { return { label: shortLoc(l.name), title: l.name, test: function (z) { return z.name === l.name; } }; });
+    }
+    return null;
+  }
+  function renderView(r, q) {
+    VIEW_R = r;
+    $('viewAt').textContent = 'ดูอย่างเดียว อัปเดต ' + r.at;
+    if (!r.stock) { $('viewBody').innerHTML = '<div class="hint">โค้ดฝั่งชีทยังเป็นฉบับเก่า วาง Code.gs ใหม่แล้ว Deploy เวอร์ชันใหม่</div>'; return; }
+    if (VS.f !== 'ALL' && VS.f.indexOf('B:') !== 0 && !vLocs().some(function (l) { return 'L:' + l.name === VS.f; })) VS.f = 'ALL';
+    if (!$('vBar')) {
+      $('viewBody').innerHTML =
+        '<section class="card vbar" id="vBar"><label>ดูที่<select id="vF"></select></label>' +
+        '<label class="vq">ค้นหา<input id="vQ" placeholder="ยี่ห้อ รุ่น BTU เลขเครื่อง หรือชื่ออุปกรณ์" autocomplete="off"></label>' +
+        '<div class="seg vtab" role="tablist" aria-label="ชนิดสินค้า"><button type="button" id="vTabAc" role="tab">แอร์</button><button type="button" id="vTabIt" role="tab">อุปกรณ์</button></div></section>' +
+        '<div class="vk" id="vK"></div>' +
+        '<div class="vchips" id="vBrands"></div>' +
+        '<div class="vrow"><div class="chips" id="vTypes"></div><label class="vhas"><input type="checkbox" id="vHas"> <span>เฉพาะที่มีของ</span></label><span class="hint" id="vCount"></span></div>' +
+        '<div id="vTools"></div>' +
+        '<div class="vgrid"><div class="vmain" id="vMain"></div><div id="vDet"></div></div>' +
+        '<div id="vMore"></div>';
+      $('vF').onchange = function () { VS.f = this.value; VS.sel = ''; vsave(); paint(); };
+      var qt = null;
+      $('vQ').oninput = function () { var v = this.value; clearTimeout(qt); qt = setTimeout(function () { VS.q = v; vsave(); paint(); }, 150); };
+      $('vTabAc').onclick = function () { VS.tab = 'ac'; vsave(); paint(); };
+      $('vTabIt').onclick = function () { VS.tab = 'it'; VS.sel = ''; vsave(); paint(); };
+      $('vHas').onchange = function () { if (VS.tab === 'ac') VS.hasAc = this.checked; else VS.hasIt = this.checked; vsave(); paint(); };
+      $('vQ').value = VS.q || '';
+    }
+    paint();
+    paintMore(r, q);
+  }
+  function paint() {
+    var r = VIEW_R, S = r.stock, ac = VS.tab === 'ac';
+    // ตัวเลือกที่
+    var opt = function (v, t) { return '<option value="' + esc(v) + '"' + (VS.f === v ? ' selected' : '') + '>' + esc(t) + '</option>'; };
+    var h = opt('ALL', 'ทุกสาขา และรถทุกคัน');
+    S.branches.concat(vLocs().some(function (l) { return !l.br; }) ? [{ id: 'NONE', name: 'รถที่ยังไม่ระบุสาขา' }] : []).forEach(function (b) {
+      h += '<optgroup label="' + esc(b.id === 'NONE' ? b.name : b.id + ' ' + b.name) + '">' + opt('B:' + b.id, b.id === 'NONE' ? 'ทั้งหมดที่ยังไม่ระบุ' : 'ทั้งสาขา ' + b.id + ' รวมรถ');
+      vLocs().filter(function (l) { return b.id === 'NONE' ? !l.br : l.br === b.id; }).sort(function (x, y) { return (x.van - y.van) || (x.name < y.name ? -1 : 1); })
+        .forEach(function (l) { h += opt('L:' + l.name, l.name); });
+      h += '</optgroup>';
+    });
+    $('vF').innerHTML = h;
+    $('vTabAc').classList.toggle('on', ac); $('vTabIt').classList.toggle('on', !ac);
+    $('vHas').checked = ac ? VS.hasAc : VS.hasIt;
+    var words = String(VS.q || '').toLowerCase().replace(/,/g, '').split(/\s+/).filter(function (w) { return w; });
+    var hit = function (key) { key = key.toLowerCase().replace(/,/g, ''); return words.every(function (w) { return key.indexOf(w) >= 0; }); };
+    var scopeLocs = vLocs().filter(inScope);
+    // ตัวเลขสรุป
+    var tot = { s: 0, g: 0 }; S.ac.forEach(function (c) { var x = acSum(c.by, inScope); tot.s += x.s; tot.g += x.g; });
+    var cut = scopeLocs.reduce(function (a, l) { return a + (S.cut[l.name] || 0); }, 0);
+    var low = 0; S.items.forEach(function (it) { scopeLocs.forEach(function (l) { if (isLow(it, l, it.by[l.name] || 0) && (it.any || it.min)) low++; }); });
+    var kh = '<div class="tile"><b>' + tot.s + '</b><span>ชุดแอร์พร้อมขาย</span></div>' +
+      '<div class="tile"><b' + (tot.g ? ' style="color:var(--warn)"' : '') + '>' + tot.g + '</b><span>กล่องยังไม่มีคู่</span></div>' +
+      '<div class="tile"><b>' + cut + '</b><span>กล่องตัดออกเดือนนี้</span></div>' +
+      '<div class="tile"><b' + (low ? ' style="color:var(--bad)"' : '') + '>' + low + '</b><span>อุปกรณ์ต่ำกว่าขั้นต่ำ</span></div>';
+    if (r.value && !r.value.denied) {
+      var v = { ac: 0, items: 0 }; (r.value.locs || []).forEach(function (o) { var l = vLocs().filter(function (x) { return x.name === o.loc; })[0]; if (l && inScope(l)) { v.ac += o.ac; v.items += o.items; } });
+      kh += '<div class="tile vval"><b>' + baht(v.ac + v.items) + '</b><span>มูลค่าคลัง แอร์ ' + baht(v.ac) + ' อุปกรณ์ ' + baht(v.items) + '</span><button class="linkbtn" type="button" id="ownerOff">ซ่อนมูลค่า</button></div>';
+    } else {
+      kh += '<div class="tile vval"><span>มูลค่าคลัง เฉพาะเจ้าของ</span><form class="row" id="ownerForm"><input id="ownerPin" type="password" inputmode="numeric" autocomplete="off" placeholder="รหัสเจ้าของ"><button class="btn small" type="submit" style="flex:none">ดู</button></form>' + (r.value && r.value.denied ? '<span style="color:var(--bad)">รหัสเจ้าของไม่ถูกต้อง</span>' : '') + '</div>';
+    }
+    $('vK').innerHTML = kh;
+    if ($('ownerForm')) $('ownerForm').onsubmit = function (e) { e.preventDefault(); st.ownerPin = $('ownerPin').value.trim(); save(); loadView(); };
+    if ($('ownerOff')) $('ownerOff').onclick = function () { st.ownerPin = ''; save(); loadView(); };
+    // ปุ่มใบเช็คของ
+    var vans = scopeLocs.filter(function (l) { return l.van; });
+    $('vTools').innerHTML = vans.length ? '<button class="btn small navy" type="button" id="vChk">' + (vans.length > 1 ? 'พิมพ์ใบเช็คของรถ ' + vans.length + ' คัน' : 'พิมพ์ใบเช็คของ ' + esc(shortLoc(vans[0].name))) + '</button>' : '';
+    if ($('vChk')) $('vChk').onclick = function () { printCheck(vans); };
+    var cols = vCols(VS.tab), main = '', n = 0, total = 0, det = '';
+    if (ac) {
+      var brands = [];
+      S.ac.forEach(function (c) { if (brands.indexOf(c.brand) < 0) brands.push(c.brand); });
+      $('vBrands').innerHTML = ['', ''].slice(0, 1).concat(brands).map(function (b) { return '<button type="button" class="chip' + (VS.brand === b ? ' on' : '') + '" data-b="' + esc(b) + '">' + esc(b || 'ทุกยี่ห้อ') + '</button>'; }).join('');
+      var tps = [''];
+      S.ac.forEach(function (c) { var t = acType(c.label); if (tps.indexOf(t) < 0) tps.push(t); });
+      tps.sort(function (a, b) { var x = AC_TYPES.indexOf(a), y = AC_TYPES.indexOf(b); return (a ? (x < 0 ? 99 : x) : -1) - (b ? (y < 0 ? 99 : y) : -1); });
+      $('vTypes').innerHTML = tps.map(function (t) { return '<button type="button" class="chip' + (VS.type === t ? ' on' : '') + '" data-t="' + esc(t) + '">' + esc(t || 'ทุกแบบ') + '</button>'; }).join('');
+      var ser = S.serials || {}, longQ = words.join('').length >= 4;
+      var list = S.ac.filter(function (c) {
+        total++;
+        if (VS.brand && c.brand !== VS.brand) return false;
+        if (VS.type && acType(c.label) !== VS.type) return false;
+        var x = acSum(c.by, inScope);
+        if (VS.hasAc && !x.n) return false;
+        if (hit(c.brand + ' ' + c.label + ' ' + c.set + ' ' + c.btu)) return true;
+        return longQ && (ser[c.set] || []).some(function (s) { return words.every(function (w) { return s[0].toLowerCase().indexOf(w) >= 0; }); });
+      });
+      n = list.length;
+      var groups = [];
+      list.forEach(function (c) { var g = groups.filter(function (x) { return x.b === c.brand; })[0]; if (!g) groups.push(g = { b: c.brand, rows: [] }); g.rows.push(c); });
+      var cell = function (x, strong) { return '<td class="' + (x.s ? '' : 'z') + (strong ? ' tot' : '') + '">' + (x.n ? x.s : '-') + (x.g ? '<small class="gp">ขาดคู่ ' + x.g + '</small>' : '') + '</td>'; };
+      // ตาราง (จอใหญ่)
+      main += '<section class="card vdesk"><div class="vscroll"><table class="vt"><thead><tr><th>รุ่น</th>' +
+        (cols ? cols.map(function (c) { return '<th title="' + esc(c.title) + '">' + esc(c.label) + '</th>'; }).join('') + '<th>รวม</th>' : '<th>เย็น</th><th>ร้อน</th><th>ครบชุด</th>') + '</tr></thead><tbody>' +
+        groups.map(function (g) {
+          var gs = g.rows.reduce(function (a, c) { return a + acSum(c.by, inScope).s; }, 0);
+          return '<tr class="gh"><td colspan="' + (cols ? cols.length + 2 : 4) + '">' + esc(g.b) + ' <small>' + g.rows.length + ' รุ่น พร้อมขาย ' + gs + ' ชุด</small></td></tr>' + g.rows.map(function (c) {
+            var x = acSum(c.by, inScope);
+            return '<tr class="vr' + (VS.sel === c.set ? ' sel' : '') + '" data-set="' + esc(c.set) + '"><td><b>' + esc(c.label) + '</b><small class="cd">' + esc(c.set + (c.btu ? ' ' + Number(c.btu).toLocaleString('en-US') + ' BTU' : '')) + '</small></td>' +
+              (cols ? cols.map(function (k) { return cell(acSum(c.by, function (l) { return inScope(l) && k.test(l); })); }).join('') + cell(x, true)
+                : '<td' + (x.i > x.o ? ' class="gap"' : '') + '>' + x.i + '</td><td' + (x.o > x.i ? ' class="gap"' : '') + '>' + x.o + '</td>' + cell(x, true)) + '</tr>';
+          }).join('');
+        }).join('') + '</tbody></table></div><div class="hint">ตัวเลขคือจำนวนชุดที่ครบคู่ ตัวสีส้มคือกล่องที่ยังไม่มีคู่ กดแถวเพื่อดูรายละเอียด</div></section>';
+      // การ์ด (มือถือ)
+      main += '<div class="vmob vcards">' + list.map(function (c) {
+        var x = acSum(c.by, inScope), where = scopeLocs.map(function (l) { var p = c.by[l.name]; return p && p[0] + p[1] + p[2] ? shortLoc(l.name) + ' ' + (Math.min(p[0], p[1]) + p[2]) + ' ชุด' : ''; }).filter(function (w) { return w; });
+        return '<button type="button" class="vcard vr' + (VS.sel === c.set ? ' sel' : '') + '" data-set="' + esc(c.set) + '"><span class="vc1"><span class="vcb">' + esc(c.brand) + '</span><b>' + esc(c.label) + '</b><small class="cd">' + esc(c.set + (c.btu ? ' ' + Number(c.btu).toLocaleString('en-US') + ' BTU' : '')) + '</small></span><span class="vc2"><b' + (x.s ? '' : ' class="z"') + '>' + x.s + '</b><small>ชุด</small></span>' +
+          (where.length ? '<span class="vwh">' + where.map(function (w) { return '<span>' + esc(w) + '</span>'; }).join('') + '</span>' : '') + (x.g ? '<span class="vgp">มีกล่องยังไม่มีคู่ ' + x.g + ' กล่อง</span>' : '') + '</button>';
+      }).join('') + '</div>';
+      // รายละเอียด
+      var c = VS.sel && S.ac.filter(function (y) { return y.set === VS.sel; })[0];
+      if (c) {
+        var x = acSum(c.by, inScope);
+        var wh = scopeLocs.filter(function (l) { var p = c.by[l.name]; return p && p[0] + p[1] + p[2]; });
+        var ss = (ser[c.set] || []).filter(function (s) { var l = vLocs().filter(function (y) { return y.name === s[2]; })[0]; return l && inScope(l); });
+        var mv = (r.moves || []).filter(function (m) { return m.set === c.set; }).slice(0, 8);
+        det = '<div class="vshade" id="vShade"></div><aside class="card vdet"><div class="vdh"><div><small>' + esc(c.brand) + '</small><h2>' + esc(c.label) + '</h2><small class="cd">' + esc(c.set + ' ' + acType(c.label) + (c.btu ? ' ' + Number(c.btu).toLocaleString('en-US') + ' BTU' : '')) + '</small></div><button class="btn small ghost" type="button" id="vClose" aria-label="ปิด">ปิด</button></div>' +
+          '<div class="tiles"><div class="tile"><b>' + x.s + '</b><span>ครบชุด</span></div><div class="tile"><b>' + x.i + '</b><span>คอยล์เย็น</span></div><div class="tile"><b>' + x.o + '</b><span>คอยล์ร้อน</span></div></div>' +
+          '<h3>อยู่ที่ไหน ' + esc(scopeName()) + '</h3>' + (wh.length ? wh.map(function (l) { var p = c.by[l.name]; return '<div class="vline"><span>' + esc(l.name) + '</span><span>เย็น ' + p[0] + ' ร้อน ' + p[1] + ' <b>' + (Math.min(p[0], p[1]) + p[2]) + ' ชุด</b></span></div>'; }).join('') : '<div class="hint">ไม่มีของในที่ที่เลือก</div>') +
+          '<h3>เลขเครื่อง ' + ss.length + ' กล่อง</h3><div class="vser">' + (ss.map(function (s) { return '<div class="vline"><span class="c">' + esc(s[0]) + '</span><span>' + esc(s[1] + ' ' + shortLoc(s[2]) + ' ' + s[3]) + '</span></div>'; }).join('') || '<div class="hint">ไม่มี</div>') + '</div>' +
+          '<h3>เคลื่อนไหวล่าสุด</h3>' + (mv.map(function (m) { return '<div class="vline"><span><span class="tag ' + (m.kind === 'ตัดออก' ? 'cut' : m.kind === 'ย้าย' ? 'mv' : 'in') + '">' + esc(m.kind) + '</span> ' + esc(m.code) + '</span><span>' + esc(m.t + ' ' + shortLoc(m.loc)) + '</span></div>'; }).join('') || '<div class="hint">ยังไม่มี</div>') + '</aside>';
+      }
+    } else {
+      $('vBrands').innerHTML = ''; $('vTypes').innerHTML = '';
+      var ilist = S.items.filter(function (it) {
+        total++;
+        if (!hit(it.code + ' ' + it.name + ' ' + it.cat)) return false;
+        if (VS.hasIt && !itSum(it.by, inScope)) return false;
+        return true;
+      });
+      n = ilist.length;
+      var shown = ilist.slice(0, 300);
+      var icell = function (it, test, strong) {
+        var q = itSum(it.by, test), lw = !strong && vLocs().some(function (l) { return test(l) && isLow(it, l, it.by[l.name] || 0) && (it.any || it.min); });
+        return '<td class="' + (q ? '' : 'z') + (lw ? ' lowc' : '') + (strong ? ' tot' : '') + '">' + (q ? fmtQ(q) : '-') + '</td>';
+      };
+      main += '<section class="card vdesk"><div class="vscroll"><table class="vt"><thead><tr><th>อุปกรณ์</th>' +
+        (cols ? cols.map(function (c) { return '<th title="' + esc(c.title) + '">' + esc(c.label) + '</th>'; }).join('') + '<th>รวม</th>' : '<th>คงเหลือ</th><th>ขั้นต่ำ</th>') + '</tr></thead><tbody>' +
+        shown.map(function (it) {
+          return '<tr><td><b>' + esc(it.name) + '</b><small class="cd">' + esc(it.code + ' หน่วย ' + it.unit + (it.min ? ' ขั้นต่ำ ' + it.min : '')) + '</small></td>' +
+            (cols ? cols.map(function (k) { return icell(it, function (l) { return inScope(l) && k.test(l); }); }).join('') + icell(it, inScope, true) : icell(it, inScope) + '<td>' + (it.min || '-') + '</td>') + '</tr>';
+        }).join('') + '</tbody></table></div><div class="hint">ช่องสีแดงคือคลังที่ต่ำกว่าขั้นต่ำ' + (n > 300 ? ' แสดง 300 รายการแรก ค้นเพื่อดูรายการอื่น' : '') + '</div></section>';
+      main += '<div class="vmob vcards">' + shown.map(function (it) {
+        var q = itSum(it.by, inScope), where = scopeLocs.map(function (l) { var b = it.by[l.name] || 0; return b || isLow(it, l, b) && it.any ? { t: shortLoc(l.name) + ' ' + fmtQ(b) + (isLow(it, l, b) ? ' ต่ำ' : ''), low: isLow(it, l, b) } : null; }).filter(function (w) { return w; });
+        return '<div class="vcard"><span class="vc1"><b>' + esc(it.name) + '</b><small class="cd">' + esc(it.code + (it.min ? ' ขั้นต่ำ ' + it.min : '')) + '</small></span><span class="vc2"><b' + (q ? '' : ' class="z"') + '>' + fmtQ(q) + '</b><small>' + esc(it.unit) + '</small></span>' +
+          (where.length ? '<span class="vwh">' + where.map(function (w) { return '<span' + (w.low ? ' class="lw"' : '') + '>' + esc(w.t) + '</span>'; }).join('') + '</span>' : '') + '</div>';
+      }).join('') + '</div>';
+    }
+    if (!n) main = '<section class="card"><div class="hint">ไม่พบรายการที่ตรงกับที่ค้น ลองล้างคำค้น หรือเลือกทุกยี่ห้อ' + (words.join('').length >= 4 ? ' ถ้าเป็นเลขเครื่องที่ตัดออกไปแล้ว กดค้นประวัติด้านล่าง' : '') + '</div></section>';
+    if (words.join('').length >= 4) main = '<button class="btn small ghost" type="button" id="vHist">ค้นประวัติเลขเครื่อง ' + esc(VS.q) + ' รวมที่ตัดออกไปแล้ว</button><div id="vFound"></div>' + main;
+    $('vCount').textContent = 'แสดง ' + n + (ac ? ' รุ่น จาก ' + total + ' รุ่นในทะเบียน' : ' รายการ จาก ' + total + ' รายการ') + ' ' + scopeName();
+    $('vMain').innerHTML = main;
+    $('vDet').innerHTML = det;
+    document.body.classList.toggle('vsheetopen', !!det);
+    if ($('vHist')) $('vHist').onclick = function () { loadView(false, VS.q); };
+    if (r.found && $('vFound')) $('vFound').innerHTML = '<section class="card"><h2>ประวัติเลขเครื่อง</h2>' + (r.found.length ? r.found.map(function (f) {
+      var where = f.st === 'นับ' ? 'อยู่ที่ ' + f.loc : f.st === 'ตัดออก' ? 'ตัดออก ' + f.outAt + ' ' + f.why + (f.ref ? ' ' + f.ref : '') : f.st === 'ย้ายออก' ? 'เคยอยู่ ' + f.loc + ' ' + f.why : 'ยกเลิก';
+      return '<div class="item"><div><div class="c">' + esc(f.code) + '</div><div class="m">' + esc(lab(r, f.set) + ' ' + f.type + ' สแกนเข้า ' + f.at + ' โดย ' + f.by) + '</div><div class="m"><span class="tag ' + (f.st === 'นับ' ? 'in' : f.st === 'ตัดออก' ? 'cut' : 'mv') + '">' + esc(f.st) + '</span> ' + esc(where) + '</div></div></div>';
+    }).join('') : '<div class="hint">ไม่พบเลขนี้</div>') + '</section>';
+    $('vBrands').onclick = function (e) { var b = e.target.closest('[data-b]'); if (b) { VS.brand = b.getAttribute('data-b'); vsave(); paint(); } };
+    $('vTypes').onclick = function (e) { var b = e.target.closest('[data-t]'); if (b) { VS.type = b.getAttribute('data-t'); vsave(); paint(); } };
+    $('vMain').onclick = function (e) { var b = e.target.closest('[data-set]'); if (b) { var s = b.getAttribute('data-set'); VS.sel = VS.sel === s ? '' : s; vsave(); paint(); } };
+    var close = function () { VS.sel = ''; vsave(); paint(); };
+    if ($('vClose')) $('vClose').onclick = close;
+    if ($('vShade')) $('vShade').onclick = close;
+  }
+  // ใบเช็คของบนรถ: ยอดในระบบ ช่องนับได้ เลขเครื่องแอร์ และช่องเซ็น
+  function printCheck(vans) {
+    var S = VIEW_R.stock, now = new Date();
+    var d = now.getDate() + '/' + (now.getMonth() + 1) + '/' + (now.getFullYear() + 543);
+    var br = function (id) { var x = S.branches.filter(function (b) { return b.id === id; })[0]; return id ? id + (x ? ' ' + x.name : '') : 'ยังไม่ระบุสาขา'; };
+    $('printArea').innerHTML = vans.map(function (l) {
+      var its = S.items.filter(function (it) { return it.by[l.name]; });
+      var acs = [];
+      S.ac.forEach(function (c) { (S.serials[c.set] || []).forEach(function (s) { if (s[2] === l.name) acs.push({ label: c.label, set: c.set, code: s[0], type: s[1] }); }); });
+      return '<div class="chkpage"><div class="chkhead"><div><b>RCA AIRCON EXPRESS</b><div>ใบเช็คของบนรถ</div></div><div class="chkt">' + esc(l.name) + '</div></div>' +
+        '<div class="chkmeta"><span>สาขา ' + esc(br(l.br)) + '</span><span>พิมพ์วันที่ ' + d + ' ' + ('0' + now.getHours()).slice(-2) + ':' + ('0' + now.getMinutes()).slice(-2) + ' น. ยอดในระบบ ณ เวลาที่พิมพ์</span><span>วันที่เช็ค ............................</span><span>คนขับ / หัวหน้าทีม ............................................</span></div>' +
+        '<h3>อุปกรณ์ ' + its.length + ' รายการ</h3><table class="chkt2"><thead><tr><th>ที่</th><th>รหัส</th><th>รายการ</th><th>หน่วย</th><th>ในระบบ</th><th>นับได้</th><th>ต่าง</th><th>หมายเหตุ</th></tr></thead><tbody>' +
+        (its.map(function (it, i) { return '<tr><td>' + (i + 1) + '</td><td>' + esc(it.code) + '</td><td class="l">' + esc(it.name) + '</td><td>' + esc(it.unit) + '</td><td>' + fmtQ(it.by[l.name]) + '</td><td></td><td></td><td></td></tr>'; }).join('') || '<tr><td colspan="8">ไม่มีอุปกรณ์ในระบบ</td></tr>') +
+        '<tr><td></td><td></td><td class="l">ของที่เจอเพิ่ม เขียนเอง</td><td></td><td></td><td></td><td></td><td></td></tr><tr><td></td><td></td><td class="l"></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td></td><td></td><td class="l"></td><td></td><td></td><td></td><td></td><td></td></tr></tbody></table>' +
+        (l.moto ? '' : '<h3>แอร์บนรถ ' + acs.length + ' กล่อง</h3><table class="chkt2"><thead><tr><th>ที่</th><th>เลขเครื่อง</th><th>รุ่น</th><th>กล่อง</th><th>เจอ</th><th>ไม่เจอ</th></tr></thead><tbody>' +
+          (acs.map(function (a, i) { return '<tr><td>' + (i + 1) + '</td><td>' + esc(a.code) + '</td><td class="l">' + esc(a.label + ' ' + a.set) + '</td><td>' + esc(a.type) + '</td><td>&#9744;</td><td>&#9744;</td></tr>'; }).join('') || '<tr><td colspan="6">ไม่มีแอร์ในระบบ</td></tr>') + '</tbody></table>') +
+        '<div class="chksign"><span>ผู้เช็ค ..................................</span><span>หัวหน้าทีม ..................................</span><span>ผู้รับรอง ..................................</span></div>' +
+        '<div class="chknote">เช็คเสร็จแล้วให้คลังกรอกยอดที่นับได้ในแอป โหมดตรวจนับ ของรถคันนี้ ระบบจะทำรายงานส่วนต่างให้</div></div>';
+    }).join('');
+    document.body.classList.add('chkprint');
+    setTimeout(function () { window.print(); setTimeout(function () { document.body.classList.remove('chkprint'); }, 500); }, 100);
+  }
+  function paintMore(r) {
+    var tagOf = function (k) { return k === 'ตัดออก' ? 'cut' : k === 'ย้าย' ? 'mv' : 'in'; };
+    var h = '<details class="card"><summary><span>แอร์เคลื่อนไหวล่าสุด</span><small>' + r.moves.length + ' รายการ</small></summary><div class="list">' + (r.moves.map(function (m) {
+      return '<div class="item"><div><div><span class="tag ' + tagOf(m.kind) + '">' + esc(m.kind) + '</span> <span class="c">' + esc(m.code) + '</span></div><div class="m">' + esc(m.t + ' ' + lab(r, m.set) + ' ' + m.type + ' ' + m.loc + ' โดย ' + m.by + (m.detail ? ' ' + m.detail : '')) + '</div></div></div>';
+    }).join('') || '<div class="hint">ยังไม่มี</div>') + '</div></details>';
+    h += '<details class="card"><summary><span>อุปกรณ์เคลื่อนไหวล่าสุด</span><small>' + (r.iMoves || []).length + ' รายการ</small></summary><div class="list">' + ((r.iMoves || []).slice(0, 30).map(function (m) {
+      return '<div class="item"><div><div><span class="tag ' + tagOf(m.kind) + '">' + esc(m.kind) + '</span> ' + esc(m.name) + ' ' + fmtQ(m.qty) + ' ' + esc(m.unit) + '</div><div class="m">' + esc(m.t + ' ' + m.loc + ' โดย ' + m.by + (m.detail ? ' ' + m.detail : '')) + '</div></div></div>';
+    }).join('') || '<div class="hint">ยังไม่มี</div>') + '</div></details>';
+    $('vMore').innerHTML = h;
+    run('countReport', { pin: viewPin(), ownerPin: st.ownerPin || '' }).then(function (cr) {
+      if (!cr.list || !cr.list.length) return;
+      var oldCr = $('vCr'); if (oldCr) oldCr.remove();
+      var sec = document.createElement('section'); sec.className = 'card'; sec.id = 'vCr';
+      sec.innerHTML = '<h2>รายงานตรวจนับล่าสุด</h2><div class="list">' + cr.list.map(function (x) {
+        return '<button type="button" class="item" data-cr="' + esc(x.id) + '" style="background:none;border:0;border-bottom:1px solid var(--line);text-align:left;cursor:pointer;color:inherit;font:inherit;width:100%"><div style="flex:1"><b>' + esc(x.loc) + '</b><div class="m">' + esc(x.at + ' โดย ' + x.by + ' ' + x.status) + '</div></div><span class="pill ok">ตรง ' + x.same + '</span><span class="pill bad">ขาด ' + x.short + '</span><span class="pill warn">เกิน ' + x.over + '</span></button>';
+      }).join('') + '</div>';
+      $('vMore').appendChild(sec);
+      sec.onclick = function (e) {
+        var b = e.target.closest('[data-cr]'); if (!b) return;
+        run('countReport', { pin: viewPin(), ownerPin: st.ownerPin || '', id: b.getAttribute('data-cr') }).then(function (d) {
+          if (!d.report) return;
+          openSheet('<div id="crBody" style="max-height:70vh;overflow-y:auto"></div><button class="btn ghost" type="button" data-x="">ปิด</button>', function () {});
+          renderReport($('crBody'), d.report, false);
+        });
+      };
+    }).catch(function () {});
+  }
+
+  // ---------- พิมพ์ป้ายอุปกรณ์ (?labels=1) ----------
+  function showLabels() {
+    ['screenStart', 'screenMain', 'screenView'].forEach(function (k) { $(k).classList.add('hide'); });
+    $('screenLabels').classList.remove('hide');
+    $('appTitle').textContent = 'พิมพ์ป้ายอุปกรณ์'; $('whoBtn').innerHTML = '';
+    run('getInit', st.pin || '').then(function (r) {
+      if (!r.ok) { $('lblPinWrap').classList.remove('hide'); $('lblMsg').textContent = st.pin ? 'รหัสไม่ถูกต้อง' : 'ใส่รหัสเข้าแอปแล้วกด Enter รายการของจะขึ้นมา'; $('lblPin').focus(); return; }
+      $('lblPinWrap').classList.add('hide'); ITEMS = r.items || []; renderLblList(); $('lblMsg').textContent = 'ติ๊กของที่จะทำป้าย ใส่จำนวนใบ แล้วกดสร้างป้าย';
+    }).catch(function (e) { $('lblMsg').textContent = String(e); });
+  }
+  function renderLblList() {
+    var cats = [];
+    ITEMS.forEach(function (it) { if (cats.indexOf(it.cat) < 0) cats.push(it.cat); });
+    $('lblList').innerHTML = cats.map(function (c) {
+      return '<h4 class="hint" style="margin:10px 0 0">' + esc(c) + '</h4>' + ITEMS.filter(function (it) { return it.cat === c; }).map(function (it) {
+        return '<label class="lbl-row" data-n="' + esc((it.name + ' ' + it.code).toLowerCase()) + '"><input type="checkbox" data-code="' + esc(it.code) + '"><span>' + esc(it.name) + '<small>' + esc(it.code + ' ' + it.per + (it.per === 'ต่อชิ้น' ? ' ได้เลขใหม่ทุกใบ' : '')) + '</small></span><input type="number" min="1" max="500" value="' + (it.per === 'ต่อชิ้น' ? 1 : 3) + '" aria-label="จำนวนป้าย"></label>';
+      }).join('');
+    }).join('') || '<div class="hint">ยังไม่มีรายการในแผ่นอุปกรณ์</div>';
+  }
+  $('lblPin').onkeydown = function (e) { if (e.key === 'Enter') { e.preventDefault(); st.pin = $('lblPin').value.trim(); save(); showLabels(); } };
+  $('lblPin').onchange = function () { if ($('lblPin').value.trim().length >= 4) { st.pin = $('lblPin').value.trim(); save(); showLabels(); } };
+  $('lblSearch').oninput = function () { var q = $('lblSearch').value.trim().toLowerCase(); $('lblList').querySelectorAll('.lbl-row').forEach(function (r) { r.classList.toggle('hide', !!q && r.getAttribute('data-n').indexOf(q) < 0); }); };
+  $('lblMake').onclick = function () {
+    if (!$('lblPinWrap').classList.contains('hide')) { st.pin = $('lblPin').value.trim(); save(); showLabels(); return; }
+    var picks = [].slice.call($('lblList').querySelectorAll('input[type=checkbox]:checked')).map(function (c) { return { code: c.getAttribute('data-code'), n: Number(c.closest('.lbl-row').querySelector('input[type=number]').value) || 1 }; });
+    if (!picks.length) { $('lblMsg').textContent = 'ติ๊กเลือกของที่จะพิมพ์ป้ายก่อน'; return; }
+    $('lblMsg').textContent = 'กำลังสร้างป้าย'; $('lblMake').disabled = true;
+    var all = [];
+    (function next(i) {
+      if (i >= picks.length) { $('lblMake').disabled = false; drawLabels(all); return; }
+      run('reserveLabels', { pin: st.pin, code: picks[i].code, n: picks[i].n }).then(function (r) {
+        if (!r.ok) { $('lblMsg').textContent = r.msg; $('lblMake').disabled = false; return; }
+        r.codes.forEach(function (c) { all.push({ code: c, name: r.item.name, unit: r.item.unit, piece: r.item.per === 'ต่อชิ้น' }); });
+        next(i + 1);
+      }).catch(function (e) { $('lblMsg').textContent = String(e); $('lblMake').disabled = false; });
+    })(0);
+  };
+  function drawLabels(all) {
+    var per = Number($('lblSize').value), lh = per === 21 ? '42.43mm' : '37.125mm', pages = [];
+    for (var i = 0; i < all.length; i += per) pages.push(all.slice(i, i + per));
+    var area = $('printArea');
+    area.innerHTML = pages.map(function (pg) {
+      return '<div class="sheet-a4" style="--lh:' + lh + '">' + pg.map(function (l) {
+        return '<div class="lab"><b>' + esc(l.name) + '</b><svg data-code="' + esc(l.code) + '"></svg><small>RCA AIRCON EXPRESS หน่วย ' + esc(l.unit) + '</small></div>';
+      }).join('') + '</div>';
+    }).join('');
+    var ok = !!window.JsBarcode;
+    area.querySelectorAll('svg[data-code]').forEach(function (svg) {
+      if (ok) { try { JsBarcode(svg, svg.getAttribute('data-code'), { format: 'CODE128', width: 1.6, height: 46, fontSize: 15, margin: 0, textMargin: 1 }); } catch (e) { ok = false; } }
+    });
+    if (!ok) { $('lblMsg').textContent = 'โหลดตัวสร้างบาร์โค้ดไม่ได้ ตรวจอินเทอร์เน็ตแล้วลองใหม่'; return; }
+    $('lblPreview').innerHTML = area.innerHTML; $('lblPreview').classList.remove('hide');
+    $('lblPrint').disabled = false;
+    $('lblMsg').textContent = 'ได้ ' + all.length + ' ป้าย ' + pages.length + ' แผ่น A4 ตรวจตัวอย่างด้านล่างแล้วกดพิมพ์ ตั้งเครื่องพิมพ์ขนาดจริง 100%';
+  }
+  $('lblPrint').onclick = function () { window.print(); };
+
+  // ---------- หน้าต่างเลือก ----------
+  function openSheet(html, cb, getVal) {
+    $('sheetBody').innerHTML = html; $('sheet').classList.remove('hide');
+    $('sheet').onclick = function (e) {
+      var b = e.target.closest('[data-x]');
+      if (b) { var v = getVal ? getVal() : null; $('sheet').classList.add('hide'); cb(b.getAttribute('data-x'), v); }
+      else if (e.target === $('sheet')) $('sheet').classList.add('hide');
+    };
+  }
+
+  // เปิดหน้าดูยอดอย่างเดียวเมื่อลิงก์มี ?view=1
+  if (IN_GAS && google.script.url) {
+    google.script.url.getLocation(function (l) { VIEW = !!(l && l.parameter && l.parameter.view); LABELS = !!(l && l.parameter && l.parameter.labels); boot(); });
+  } else {
+    VIEW = /[?&]view=/.test(location.search);
+    LABELS = /[?&]labels=/.test(location.search);
+    boot();
+  }
+})();
+</script>
+</body>
+</html>
